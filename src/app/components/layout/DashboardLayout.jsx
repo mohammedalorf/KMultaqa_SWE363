@@ -1,7 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "../ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
-import { LogOut, User } from "lucide-react";
+import { LogOut } from "lucide-react";
 
 export function DashboardLayout({ role, userName, sidebarItems, children }) {
   const location = useLocation();
@@ -36,12 +35,6 @@ export function DashboardLayout({ role, userName, sidebarItems, children }) {
         {/* User section at bottom */}
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-border">
           <div className="flex items-center gap-3 mb-3">
-            <Avatar className="w-8 h-8">
-              <AvatarImage src="" />
-              <AvatarFallback>
-                {userName.split(' ').map(n => n[0]).join('')}
-              </AvatarFallback>
-            </Avatar>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium truncate">{userName}</p>
               <p className="text-xs text-muted-foreground capitalize">{role}</p>
