@@ -115,7 +115,17 @@ export default function Appeals() {
       <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Appeal Review</DialogTitle>
+            <div className="flex items-center justify-between">
+              <DialogTitle>Appeal Review</DialogTitle>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowDetailsDialog(false)}
+                className="h-6 w-6 p-0"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
           </DialogHeader>
           {selectedAppeal && (
             <div className="space-y-4">

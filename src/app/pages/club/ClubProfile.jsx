@@ -21,12 +21,18 @@ const MAX_LOGO_SIZE = 2 * 1024 * 1024;
 const ALLOWED_LOGO_TYPES = ["image/png", "image/jpeg", "image/webp"];
 
 export default function ClubProfile() {
-  const [clubName, setClubName] = useState("IEEE KFUPM Student Branch");
-  const [category, setCategory] = useState("Engineering");
-  const [bio, setBio] = useState(
-    "The Institute of Electrical and Electronics Engineers student branch at KFUPM. We organize technical workshops, competitions, and networking events."
-  );
-  const [contact, setContact] = useState("ieee@kfupm.edu.sa");
+  const [clubName, setClubName] = useState(() => {
+    return localStorage.getItem('clubName') || "IEEE KFUPM Student Branch";
+  });
+  const [category, setCategory] = useState(() => {
+    return localStorage.getItem('clubCategory') || "Engineering";
+  });
+  const [bio, setBio] = useState(() => {
+    return localStorage.getItem('clubBio') || "The Institute of Electrical and Electronics Engineers student branch at KFUPM. We organize technical workshops, competitions, and networking events.";
+  });
+  const [contact, setContact] = useState(() => {
+    return localStorage.getItem('clubContact') || "ieee@kfupm.edu.sa";
+  });
   const [logoFile, setLogoFile] = useState(null);
   const fileInputRef = useRef(null);
 
@@ -46,6 +52,17 @@ export default function ClubProfile() {
 
     setLogoFile(file);
     toast.success("Logo selected successfully.");
+  };
+
+  const handleCancel = () => {
+    setClubName(localStorage.getItem('clubName') || "IEEE KFUPM Student Branch");
+    setCategory(localStorage.getItem('clubCategory') || "Engineering");
+    setBio(localStorage.getItem('clubBio') || "The Institute of Electrical and Electronics Engineers student branch at KFUPM. We organize technical workshops, competitions, and networking events.");
+    setContact(localStorage.getItem('clubContact') || "ieee@kfupm.edu.sa");
+    setLogoFile(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
   };
 
   const handleSave = () => {
@@ -70,6 +87,12 @@ export default function ClubProfile() {
     }
 
     toast.success("Profile updated successfully!");
+    
+    // Save to localStorage
+    localStorage.setItem('clubName', clubName);
+    localStorage.setItem('clubCategory', category);
+    localStorage.setItem('clubBio', bio);
+    localStorage.setItem('clubContact', contact);
   };
 
   return (
@@ -139,7 +162,7 @@ export default function ClubProfile() {
 
             <div className="flex gap-2 pt-4">
               <Button onClick={handleSave}>Save Changes</Button>
-              <Button variant="outline">Cancel</Button>
+              <Button variant="outline" onClick={handleCancel}>Cancel</Button>
             </div>
           </div>
         </Card>

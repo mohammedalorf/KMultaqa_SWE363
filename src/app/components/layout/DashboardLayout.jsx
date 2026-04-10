@@ -1,9 +1,15 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "../ui/button";
 import { LogOut } from "lucide-react";
 
 export function DashboardLayout({ role, userName, sidebarItems, children }) {
   const location = useLocation();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    localStorage.removeItem("userRole");
+    navigate("/");
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -40,7 +46,7 @@ export function DashboardLayout({ role, userName, sidebarItems, children }) {
               <p className="text-xs text-muted-foreground capitalize">{role}</p>
             </div>
           </div>
-          <Button variant="ghost" size="sm" className="w-full justify-start">
+          <Button variant="ghost" size="sm" className="w-full justify-start" onClick={handleLogout}>
             <LogOut className="w-4 h-4 mr-2" />
             Sign Out
           </Button>

@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../../components/ui/dialog";
 import { Textarea } from "../../components/ui/textarea";
 import { Label } from "../../components/ui/label";
-import { LayoutDashboard, CheckSquare, Flag, Users, Megaphone, Scale, FileText, Settings, AlertTriangle, Eye, Trash2, EyeOff, Ban } from "lucide-react";
+import { LayoutDashboard, CheckSquare, Flag, Users, Megaphone, Scale, FileText, Settings, AlertTriangle, Eye, Trash2, EyeOff, Ban, X } from "lucide-react";
 import { useState } from "react";
 import { mockReports } from "../../data/mockData";
 import { toast } from "sonner";
@@ -166,7 +166,17 @@ export default function ReportsModeration() {
       <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Report Details</DialogTitle>
+            <div className="flex items-center justify-between">
+              <DialogTitle>Report Details</DialogTitle>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowDetailsDialog(false)}
+                className="h-6 w-6 p-0"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
           </DialogHeader>
           {selectedReport && (
             <div className="space-y-4">

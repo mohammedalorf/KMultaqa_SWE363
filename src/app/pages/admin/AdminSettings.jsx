@@ -2,6 +2,7 @@ import { useState } from "react";
 import { DashboardLayout } from "../../components/layout/DashboardLayout";
 import { Card } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
+import { Switch } from "../../components/ui/switch";
 import { LayoutDashboard, Shield, Flag, Building2, Megaphone, Scale, FileText, Settings, Bell, Lock, Globe, Save, } from "lucide-react";
 import { toast } from "sonner";
 
@@ -17,30 +18,34 @@ const sidebarItems = [
 ];
 
 export default function AdminSettings() {
-    const [settings, setSettings] = useState({
-        // General Settings
-        platformName: "KFUPM Clubs Platform",
-        platformDescription: "Official clubs and events management system for KFUPM",
-        maintenanceMode: false,
-        // Notification Settings
-        emailNotifications: true,
-        pushNotifications: true,
-        weeklyDigest: true,
-        // Club Settings
-        autoApprovalEnabled: false,
-        minFollowersForVerification: 50,
-        maxEventsPerMonth: 10,
-        // Moderation Settings
-        autoModeration: true,
-        reportThreshold: 3,
-        contentFilterEnabled: true,
-        // Security Settings
-        twoFactorAuth: false,
-        sessionTimeout: 30,
-        passwordExpiry: 90,
+    const [settings, setSettings] = useState(() => {
+        const saved = localStorage.getItem('adminSettings');
+        return saved ? JSON.parse(saved) : {
+            // General Settings
+            platformName: "KFUPM Clubs Platform",
+            platformDescription: "Official clubs and events management system for KFUPM",
+            maintenanceMode: false,
+            // Notification Settings
+            emailNotifications: true,
+            pushNotifications: true,
+            weeklyDigest: true,
+            // Club Settings
+            autoApprovalEnabled: false,
+            minFollowersForVerification: 50,
+            maxEventsPerMonth: 10,
+            // Moderation Settings
+            autoModeration: true,
+            reportThreshold: 3,
+            contentFilterEnabled: true,
+            // Security Settings
+            twoFactorAuth: false,
+            sessionTimeout: 30,
+            passwordExpiry: 90,
+        };
     });
 
     const handleSaveSettings = () => {
+        localStorage.setItem('adminSettings', JSON.stringify(settings));
         toast.success("Settings saved successfully");
     };
 
@@ -112,12 +117,7 @@ export default function AdminSettings() {
                                 <div className="font-medium">Maintenance Mode</div>
                                 <div className="text-sm text-muted-foreground">Temporarily disable the platform for maintenance</div>
                             </div>
-                            <button
-                                onClick={() => handleToggle("maintenanceMode")}
-                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${settings.maintenanceMode ? "bg-primary" : "bg-gray-300"}`}
-                            >
-                                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${settings.maintenanceMode ? "translate-x-6" : "translate-x-1"}`}/>
-                            </button>
+                            <Switch checked={settings.maintenanceMode} onCheckedChange={() => handleToggle("maintenanceMode")} />
                         </div>
                     </div>
                 </Card>
@@ -140,12 +140,7 @@ export default function AdminSettings() {
                                 <div className="font-medium">Email Notifications</div>
                                 <div className="text-sm text-muted-foreground">Send notifications via email</div>
                             </div>
-                            <button
-                                onClick={() => handleToggle("emailNotifications")}
-                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${settings.emailNotifications ? "bg-primary" : "bg-gray-300"}`}
-                            >
-                                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${settings.emailNotifications ? "translate-x-6" : "translate-x-1"}`}/>
-                            </button>
+                            <Switch checked={settings.emailNotifications} onCheckedChange={() => handleToggle("emailNotifications")} />
                         </div>
 
                         <div className="flex items-center justify-between p-4 bg-accent rounded-lg">
@@ -153,12 +148,7 @@ export default function AdminSettings() {
                                 <div className="font-medium">Push Notifications</div>
                                 <div className="text-sm text-muted-foreground">Enable browser push notifications</div>
                             </div>
-                            <button
-                                onClick={() => handleToggle("pushNotifications")}
-                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${settings.pushNotifications ? "bg-primary" : "bg-gray-300"}`}
-                            >
-                                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${settings.pushNotifications ? "translate-x-6" : "translate-x-1"}`}/>
-                            </button>
+                            <Switch checked={settings.pushNotifications} onCheckedChange={() => handleToggle("pushNotifications")} />
                         </div>
 
                         <div className="flex items-center justify-between p-4 bg-accent rounded-lg">
@@ -166,12 +156,7 @@ export default function AdminSettings() {
                                 <div className="font-medium">Weekly Digest</div>
                                 <div className="text-sm text-muted-foreground">Send weekly summary emails to users</div>
                             </div>
-                            <button
-                                onClick={() => handleToggle("weeklyDigest")}
-                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${settings.weeklyDigest ? "bg-primary" : "bg-gray-300"}`}
-                            >
-                                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${settings.weeklyDigest ? "translate-x-6" : "translate-x-1"}`}/>
-                            </button>
+                            <Switch checked={settings.weeklyDigest} onCheckedChange={() => handleToggle("weeklyDigest")} />
                         </div>
                     </div>
                 </Card>
@@ -194,12 +179,7 @@ export default function AdminSettings() {
                                 <div className="font-medium">Auto Approval</div>
                                 <div className="text-sm text-muted-foreground">Automatically approve new club registrations</div>
                             </div>
-                            <button
-                                onClick={() => handleToggle("autoApprovalEnabled")}
-                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${settings.autoApprovalEnabled ? "bg-primary" : "bg-gray-300"}`}
-                            >
-                                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${settings.autoApprovalEnabled ? "translate-x-6" : "translate-x-1"}`}/>
-                            </button>
+                            <Switch checked={settings.autoApprovalEnabled} onCheckedChange={() => handleToggle("autoApprovalEnabled")} />
                         </div>
 
                         <div>
@@ -244,12 +224,7 @@ export default function AdminSettings() {
                                 <div className="font-medium">Auto Moderation</div>
                                 <div className="text-sm text-muted-foreground">Automatically flag inappropriate content</div>
                             </div>
-                            <button
-                                onClick={() => handleToggle("autoModeration")}
-                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${settings.autoModeration ? "bg-primary" : "bg-gray-300"}`}
-                            >
-                                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${settings.autoModeration ? "translate-x-6" : "translate-x-1"}`}/>
-                            </button>
+                            <Switch checked={settings.autoModeration} onCheckedChange={() => handleToggle("autoModeration")} />
                         </div>
 
                         <div className="flex items-center justify-between p-4 bg-accent rounded-lg">
@@ -257,12 +232,7 @@ export default function AdminSettings() {
                                 <div className="font-medium">Content Filter</div>
                                 <div className="text-sm text-muted-foreground">Filter inappropriate words and phrases</div>
                             </div>
-                            <button
-                                onClick={() => handleToggle("contentFilterEnabled")}
-                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${settings.contentFilterEnabled ? "bg-primary" : "bg-gray-300"}`}
-                            >
-                                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${settings.contentFilterEnabled ? "translate-x-6" : "translate-x-1"}`}/>
-                            </button>
+                            <Switch checked={settings.contentFilterEnabled} onCheckedChange={() => handleToggle("contentFilterEnabled")} />
                         </div>
 
                         <div>
@@ -296,12 +266,7 @@ export default function AdminSettings() {
                                 <div className="font-medium">Two-Factor Authentication</div>
                                 <div className="text-sm text-muted-foreground">Require 2FA for admin accounts</div>
                             </div>
-                            <button
-                                onClick={() => handleToggle("twoFactorAuth")}
-                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${settings.twoFactorAuth ? "bg-primary" : "bg-gray-300"}`}
-                            >
-                                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${settings.twoFactorAuth ? "translate-x-6" : "translate-x-1"}`}/>
-                            </button>
+                            <Switch checked={settings.twoFactorAuth} onCheckedChange={() => handleToggle("twoFactorAuth")} />
                         </div>
 
                         <div>

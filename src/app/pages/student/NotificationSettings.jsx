@@ -17,14 +17,21 @@ const navItems = [
 
 export default function NotificationSettings() {
   const [emailVerified] = useState(false);
-  const [followedClubIds, setFollowedClubIds] = useState(["1", "2", "3"]);
-  const [globalSettings, setGlobalSettings] = useState({ inApp: true, email: true });
-  const [clubSettings, setClubSettings] = useState(() =>
-    mockClubs.reduce((acc, club) => {
+  const [followedClubIds, setFollowedClubIds] = useState(() => {
+    const saved = localStorage.getItem('followedClubIds');
+    return saved ? JSON.parse(saved) : ["1", "2", "3"];
+  });
+  const [globalSettings, setGlobalSettings] = useState(() => {
+    const saved = localStorage.getItem('globalSettings');
+    return saved ? JSON.parse(saved) : { inApp: true, email: true };
+  });
+  const [clubSettings, setClubSettings] = useState(() => {
+    const saved = localStorage.getItem('clubSettings');
+    return saved ? JSON.parse(saved) : mockClubs.reduce((acc, club) => {
       acc[String(club.id)] = { email: true, inApp: true };
       return acc;
-    }, {})
-  );
+    }, {});
+  });
 
   const followedClubs = useMemo(
     () => mockClubs.filter((club) => followedClubIds.includes(String(club.id))),
@@ -48,9 +55,18 @@ export default function NotificationSettings() {
 
   const handleUnfollow = (clubId) => {
     setFollowedClubIds((prev) => prev.filter((id) => id !== clubId));
+    // Remove club settings when unfollowing
+    setClubSettings((prev) => {
+      const updated = { ...prev };
+      delete updated[clubId];
+      return updated;
+    });
   };
 
   const handleSave = () => {
+    localStorage.setItem('followedClubIds', JSON.stringify(followedClubIds));
+    localStorage.setItem('globalSettings', JSON.stringify(globalSettings));
+    localStorage.setItem('clubSettings', JSON.stringify(clubSettings));
     toast.success("Clubs and notification preferences saved successfully.");
   };
 

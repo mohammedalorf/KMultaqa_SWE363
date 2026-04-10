@@ -152,7 +152,17 @@ export default function ClubApprovals() {
       <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Club Approval Request Details</DialogTitle>
+            <div className="flex items-center justify-between">
+              <DialogTitle>Club Approval Request Details</DialogTitle>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowDetailsDialog(false)}
+                className="h-6 w-6 p-0"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
           </DialogHeader>
           {selectedApproval && (
             <div className="space-y-4">

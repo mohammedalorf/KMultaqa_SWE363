@@ -61,6 +61,10 @@ export default function ExportReports() {
     toast.success(`${reportType} report exported as ${format.toUpperCase()} (${estimatedRows} rows)`);
   };
 
+  const handleDownload = (fileName) => {
+    toast.info(`${fileName} download not available in demo mode.`);
+  };
+
   return (
     <DashboardLayout role="admin" userName="Dr. Abdullah Al-Mutairi" sidebarItems={sidebarItems}>
       <div className="space-y-6">
@@ -155,7 +159,7 @@ export default function ExportReports() {
                 <div className="text-xs text-muted-foreground">CSV</div>
               </div>
               <div className="text-xs text-muted-foreground mb-3">Exported: Feb 18, 2026</div>
-              <Button variant="outline" size="sm" className="w-full">
+              <Button variant="outline" size="sm" className="w-full" onClick={() => handleDownload("Clubs Report")}>
                 <Download className="w-3 h-3 mr-1" />
                 Download
               </Button>
@@ -166,7 +170,7 @@ export default function ExportReports() {
                 <div className="text-xs text-muted-foreground">PDF</div>
               </div>
               <div className="text-xs text-muted-foreground mb-3">Exported: Feb 15, 2026</div>
-              <Button variant="outline" size="sm" className="w-full">
+              <Button variant="outline" size="sm" className="w-full" onClick={() => handleDownload("Events Report")}>
                 <Download className="w-3 h-3 mr-1" />
                 Download
               </Button>
@@ -177,7 +181,7 @@ export default function ExportReports() {
                 <div className="text-xs text-muted-foreground">CSV</div>
               </div>
               <div className="text-xs text-muted-foreground mb-3">Exported: Feb 10, 2026</div>
-              <Button variant="outline" size="sm" className="w-full">
+              <Button variant="outline" size="sm" className="w-full" onClick={() => handleDownload("Reports List")}>
                 <Download className="w-3 h-3 mr-1" />
                 Download
               </Button>
