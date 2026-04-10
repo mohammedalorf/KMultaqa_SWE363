@@ -14,6 +14,7 @@ import ClubApprovals from "./pages/admin/ClubApprovals";
 import ClubManagement from "./pages/admin/ClubManagement";
 import ExportReports from "./pages/admin/ExportReports";
 import ReportsModeration from "./pages/admin/ReportsModeration";
+import Appeals from "./pages/admin/Appeals";
 import ClubLogin from "./pages/club/ClubLogin";
 
 export const router = createBrowserRouter([
@@ -73,6 +74,10 @@ export const router = createBrowserRouter([
   {
     path: "/admin/reports",
     element: <ReportsModeration />,
+  },
+  {
+    path: "/admin/appeals",
+    element: <Appeals />,
   },
   {
     path: "/club/login",
