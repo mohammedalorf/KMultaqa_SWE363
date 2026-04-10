@@ -6,7 +6,7 @@ import { mockClubs, mockEvents, mockReports, mockApprovals } from "../../data/mo
 const sidebarItems = [
     { label: "Dashboard", path: "/admin/dashboard", icon: <LayoutDashboard className="w-4 h-4 mr-2"/> },
     { label: "Club Approvals", path: "/admin/club-approvals", icon: <CheckSquare className="w-4 h-4 mr-2"/> },
-    { label: "Reports", path: "/admin/reports", icon: <Flag className="w-4 h-4 mr-2"/> },
+    { label: "Reports & Moderation", path: "/admin/reports", icon: <Flag className="w-4 h-4 mr-2"/> },
     { label: "Club Management", path: "/admin/club-management", icon: <Users className="w-4 h-4 mr-2"/> },
     { label: "Announcements", path: "/admin/announcements", icon: <Megaphone className="w-4 h-4 mr-2"/> },
     { label: "Appeals", path: "/admin/appeals", icon: <Scale className="w-4 h-4 mr-2"/> },

@@ -8,6 +8,7 @@ import MyEvents from "./pages/student/MyEvents";
 import NotificationSettings from "./pages/student/NotificationSettings";
 import AdminLogin from "./pages/admin/AdminLogin";
 import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminSettings from "./pages/admin/AdminSettings";
 import ClubLogin from "./pages/club/ClubLogin";
 
 export const router = createBrowserRouter([
@@ -43,6 +44,10 @@ export const router = createBrowserRouter([
   {
     path: "/admin/dashboard",
     element: <AdminDashboard />,
+  },
+  {
+    path: "/admin/settings",
+    element: <AdminSettings />,
   },
   {
     path: "/club/login",
