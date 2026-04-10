@@ -10,6 +10,7 @@ export const mockClubs = [
     category: "Technology",
     coverImage: "/api/placeholder/400/200",
     isFollowing: true,
+    status: "active",
   },
   {
     id: 2,
@@ -20,6 +21,7 @@ export const mockClubs = [
     category: "Engineering",
     coverImage: "/api/placeholder/400/200",
     isFollowing: true,
+    status: "active",
   },
   {
     id: 3,
@@ -30,6 +32,7 @@ export const mockClubs = [
     category: "Arts",
     coverImage: "/api/placeholder/400/200",
     isFollowing: true,
+    status: "active",
   },
   {
     id: 4,
@@ -40,6 +43,7 @@ export const mockClubs = [
     category: "Sports",
     coverImage: "/api/placeholder/400/200",
     isFollowing: false,
+    status: "active",
   },
   {
     id: 5,
@@ -50,6 +54,7 @@ export const mockClubs = [
     category: "Academic",
     coverImage: "/api/placeholder/400/200",
     isFollowing: false,
+    status: "restricted",
   },
   {
     id: 6,
@@ -60,6 +65,7 @@ export const mockClubs = [
     category: "Arts",
     coverImage: "/api/placeholder/400/200",
     isFollowing: false,
+    status: "active",
   },
 ];
 
@@ -144,5 +150,74 @@ export const mockPosts = [
     type: "event",
     createdAt: "2024-04-08T12:00:00Z",
     image: "/api/placeholder/400/200",
+  },
+];
+
+export const mockReports = [
+  {
+    id: 1,
+    targetName: "Computer Science Club",
+    targetType: "club",
+    reason: "Inappropriate content in post",
+    severity: "medium",
+    status: "new",
+    reportedBy: "Student ID: s123456",
+    reportedAt: "2024-04-08T10:00:00Z",
+    description: "Post contains offensive language",
+  },
+  {
+    id: 2,
+    targetName: "Robotics Club Event",
+    targetType: "event",
+    reason: "Spam content",
+    severity: "low",
+    status: "resolved",
+    reportedBy: "Student ID: s234567",
+    reportedAt: "2024-04-07T14:30:00Z",
+    description: "Event description is misleading",
+  },
+  {
+    id: 3,
+    targetName: "Photography Club",
+    targetType: "club",
+    reason: "Harassment",
+    severity: "high",
+    status: "in-review",
+    reportedBy: "Student ID: s345678",
+    reportedAt: "2024-04-06T09:15:00Z",
+    description: "Club representative is harassing members",
+  },
+];
+
+export const mockApprovals = [
+  {
+    id: 1,
+    clubName: "AI & Machine Learning Club",
+    category: "Technology",
+    description: "A club focused on artificial intelligence and machine learning projects",
+    requestedBy: "Dr. Ahmed Al-Shehri",
+    requestedAt: "2024-04-05T08:00:00Z",
+    status: "pending",
+    documents: ["constitution.pdf", "member_list.pdf"],
+  },
+  {
+    id: 2,
+    clubName: "Environmental Club",
+    category: "Community Service",
+    description: "Promoting environmental awareness and sustainability",
+    requestedBy: "Prof. Fatima Al-Zahrani",
+    requestedAt: "2024-04-04T10:30:00Z",
+    status: "pending",
+    documents: ["constitution.pdf", "proposal.pdf"],
+  },
+  {
+    id: 3,
+    clubName: "Music Club",
+    category: "Arts",
+    description: "KFUPM's premier music club",
+    requestedBy: "Dr. Khalid Al-Mansour",
+    requestedAt: "2024-04-03T14:20:00Z",
+    status: "approved",
+    documents: ["constitution.pdf", "member_list.pdf"],
   },
 ];
