@@ -1,153 +1,144 @@
-import { useState } from "react";
+﻿import { useMemo, useState } from "react";
 import { StudentLayout } from "../../components/layout/StudentLayout";
 import { Card } from "../../components/ui/card";
 import { Label } from "../../components/ui/label";
 import { Switch } from "../../components/ui/switch";
-import { Search, Settings, Calendar, Bell, Mail, Rss, } from "lucide-react";
+import { Button } from "../../components/ui/button";
+import { Search, Settings, Calendar, Bell, Mail, Rss } from "lucide-react";
 import { mockClubs } from "../../data/mockData";
 import { toast } from "sonner";
+
 const navItems = [
-    { label: "Feed", path: "/student/dashboard", icon: <Rss className="w-4 h-4"/> },
-    { label: "Explore Clubs", path: "/student/explore", icon: <Search className="w-4 h-4"/> },
-    { label: "My Events", path: "/student/my-events", icon: <Calendar className="w-4 h-4"/> },
-    { label: "Settings", path: "/student/settings", icon: <Settings className="w-4 h-4"/> },
+  { label: "Feed", path: "/student/dashboard", icon: <Rss className="w-4 h-4" /> },
+  { label: "Explore Clubs", path: "/student/explore", icon: <Search className="w-4 h-4" /> },
+  { label: "My Events", path: "/student/my-events", icon: <Calendar className="w-4 h-4" /> },
+  { label: "Settings", path: "/student/settings", icon: <Settings className="w-4 h-4" /> }
 ];
+
 export default function NotificationSettings() {
-    const followedClubs = mockClubs.slice(0, 3);
-    const [clubSettings, setClubSettings] = useState(followedClubs.reduce((acc, club) => ({
-        ...acc,
-        [club.id]: { email: true, inApp: true }
-    }), {}));
-    const handleToggle = (clubId, type) => {
-        setClubSettings({
-            ...clubSettings,
-            [clubId]: {
-                ...clubSettings[clubId],
-                [type]: !clubSettings[clubId][type]
-            }
-        });
-        toast.success("Notification settings updated");
-    };
-    return (<StudentLayout userName="Ahmed Al-Qahtani" navItems={navItems}>
+  const [emailVerified] = useState(false);
+  const [followedClubIds, setFollowedClubIds] = useState(["1", "2", "3"]);
+  const [globalSettings, setGlobalSettings] = useState({ inApp: true, email: true });
+  const [clubSettings, setClubSettings] = useState(() =>
+    mockClubs.reduce((acc, club) => {
+      acc[String(club.id)] = { email: true, inApp: true };
+      return acc;
+    }, {})
+  );
+
+  const followedClubs = useMemo(
+    () => mockClubs.filter((club) => followedClubIds.includes(String(club.id))),
+    [followedClubIds]
+  );
+
+  const handleToggle = (clubId, type) => {
+    if (type === "email" && !emailVerified) {
+      toast.error("Verify your university email before enabling email notifications.");
+      return;
+    }
+
+    setClubSettings((prev) => ({
+      ...prev,
+      [clubId]: {
+        ...prev[clubId],
+        [type]: !prev[clubId][type]
+      }
+    }));
+  };
+
+  const handleUnfollow = (clubId) => {
+    setFollowedClubIds((prev) => prev.filter((id) => id !== clubId));
+  };
+
+  const handleSave = () => {
+    toast.success("Clubs and notification preferences saved successfully.");
+  };
+
+  return (
+    <StudentLayout userName="Ahmed Al-Qahtani" navItems={navItems}>
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold mb-2">Notification Settings</h1>
-          <p className="text-muted-foreground">
-            Manage your notification preferences for followed clubs
-          </p>
+          <h1 className="text-3xl font-bold mb-2">Clubs & Notifications</h1>
+          <p className="text-muted-foreground">Manage followed clubs and notification preferences in one place</p>
         </div>
 
-        {/* Global Settings */}
         <Card className="p-6">
           <h2 className="text-xl font-semibold mb-4">Global Settings</h2>
           <div className="space-y-4">
             <div className="flex items-center justify-between p-4 bg-accent/50 rounded-lg">
               <div className="flex items-center gap-3">
-                <Bell className="w-5 h-5 text-primary"/>
+                <Bell className="w-5 h-5 text-primary" />
                 <div>
                   <Label>In-App Notifications</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Receive notifications within the platform
-                  </p>
+                  <p className="text-sm text-muted-foreground">Receive notifications within the platform</p>
                 </div>
               </div>
-              <Switch defaultChecked/>
+              <Switch checked={globalSettings.inApp} onCheckedChange={(checked) => setGlobalSettings((prev) => ({ ...prev, inApp: checked }))} />
             </div>
             <div className="flex items-center justify-between p-4 bg-accent/50 rounded-lg">
               <div className="flex items-center gap-3">
-                <Mail className="w-5 h-5 text-primary"/>
+                <Mail className="w-5 h-5 text-primary" />
                 <div>
                   <Label>Email Notifications</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Receive notifications via email
-                  </p>
+                  <p className="text-sm text-muted-foreground">Receive notifications via university email</p>
+                  {!emailVerified && <p className="text-xs text-amber-700">University email not verified yet.</p>}
                 </div>
               </div>
-              <Switch defaultChecked/>
+              <Switch
+                checked={globalSettings.email}
+                disabled={!emailVerified}
+                onCheckedChange={(checked) => setGlobalSettings((prev) => ({ ...prev, email: checked }))}
+              />
             </div>
           </div>
         </Card>
 
-        {/* Per-Club Settings */}
         <Card className="p-6">
           <h2 className="text-xl font-semibold mb-4">Followed Clubs</h2>
           <div className="space-y-4">
-            {followedClubs.map((club) => (<div key={club.id} className="p-4 border border-border rounded-lg">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-12 h-12 bg-accent rounded-full flex items-center justify-center text-2xl">
-                    {club.logo}
+            {followedClubs.map((club) => {
+              const clubId = String(club.id);
+              return (
+                <div key={clubId} className="p-4 border border-border rounded-lg">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 bg-accent rounded-full flex items-center justify-center text-2xl">{club.logo}</div>
+                      <div>
+                        <div className="font-semibold">{club.name}</div>
+                        <div className="text-sm text-muted-foreground">{club.category}</div>
+                      </div>
+                    </div>
+                    <Button variant="outline" size="sm" onClick={() => handleUnfollow(clubId)}>
+                      Unfollow
+                    </Button>
                   </div>
-                  <div>
-                    <div className="font-semibold">{club.name}</div>
-                    <div className="text-sm text-muted-foreground">{club.category}</div>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label className="text-sm">Email Notifications</Label>
+                        <p className="text-xs text-muted-foreground">Get emails for new posts and events</p>
+                      </div>
+                      <Switch checked={clubSettings[clubId]?.email} onCheckedChange={() => handleToggle(clubId, "email")} disabled={!emailVerified} />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label className="text-sm">In-App Notifications</Label>
+                        <p className="text-xs text-muted-foreground">Show notifications in the app</p>
+                      </div>
+                      <Switch checked={clubSettings[clubId]?.inApp} onCheckedChange={() => handleToggle(clubId, "inApp")} />
+                    </div>
                   </div>
                 </div>
-                <div className="space-y-3 pl-15">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <Label className="text-sm">Email Notifications</Label>
-                      <p className="text-xs text-muted-foreground">
-                        Get emails for new posts and events
-                      </p>
-                    </div>
-                    <Switch checked={clubSettings[club.id]?.email} onCheckedChange={() => handleToggle(club.id, 'email')}/>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <Label className="text-sm">In-App Notifications</Label>
-                      <p className="text-xs text-muted-foreground">
-                        Show notifications in the app
-                      </p>
-                    </div>
-                    <Switch checked={clubSettings[club.id]?.inApp} onCheckedChange={() => handleToggle(club.id, 'inApp')}/>
-                  </div>
-                </div>
-              </div>))}
+              );
+            })}
+            {followedClubs.length === 0 && <p className="text-sm text-muted-foreground">You are not following any clubs.</p>}
           </div>
-        </Card>
 
-        {/* Notification Types */}
-        <Card className="p-6">
-          <h2 className="text-xl font-semibold mb-4">Notification Types</h2>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between p-3 border-b border-border last:border-0">
-              <div>
-                <Label>New Posts</Label>
-                <p className="text-sm text-muted-foreground">
-                  When clubs you follow publish new posts
-                </p>
-              </div>
-              <Switch defaultChecked/>
-            </div>
-            <div className="flex items-center justify-between p-3 border-b border-border last:border-0">
-              <div>
-                <Label>New Events</Label>
-                <p className="text-sm text-muted-foreground">
-                  When clubs you follow create new events
-                </p>
-              </div>
-              <Switch defaultChecked/>
-            </div>
-            <div className="flex items-center justify-between p-3 border-b border-border last:border-0">
-              <div>
-                <Label>Event Reminders</Label>
-                <p className="text-sm text-muted-foreground">
-                  Reminders for events you've registered for
-                </p>
-              </div>
-              <Switch defaultChecked/>
-            </div>
-            <div className="flex items-center justify-between p-3 border-b border-border last:border-0">
-              <div>
-                <Label>Platform Announcements</Label>
-                <p className="text-sm text-muted-foreground">
-                  Important updates from KFUPM Clubs Platform
-                </p>
-              </div>
-              <Switch defaultChecked/>
-            </div>
+          <div className="pt-6">
+            <Button onClick={handleSave}>Save Changes</Button>
           </div>
         </Card>
       </div>
-    </StudentLayout>);
+    </StudentLayout>
+  );
 }

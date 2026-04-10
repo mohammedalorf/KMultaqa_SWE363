@@ -1,11 +1,14 @@
-import { createBrowserRouter } from "react-router-dom";
+﻿import { createBrowserRouter } from "react-router-dom";
 import LandingPage from "./pages/LandingPage";
 import NotFound from "./pages/NotFound";
 import StudentLogin from "./pages/student/StudentLogin";
+import StudentRegister from "./pages/student/StudentRegister";
 import StudentDashboard from "./pages/student/StudentDashboard";
 import ExploreClubs from "./pages/student/ExploreClubs";
 import MyEvents from "./pages/student/MyEvents";
 import NotificationSettings from "./pages/student/NotificationSettings";
+import ClubProfileView from "./pages/student/ClubProfileView";
+import EventRegistration from "./pages/student/EventRegistration";
 import AdminLogin from "./pages/admin/AdminLogin";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminSettings from "./pages/admin/AdminSettings";
@@ -21,66 +24,82 @@ export const router = createBrowserRouter([
   {
     path: "/",
     element: <LandingPage />,
-    errorElement: <NotFound />,
+    errorElement: <NotFound />
   },
   {
     path: "/student/login",
-    element: <StudentLogin />,
+    element: <StudentLogin />
+  },
+  {
+    path: "/student/register",
+    element: <StudentRegister />
   },
   {
     path: "/student/dashboard",
-    element: <StudentDashboard />,
+    element: <StudentDashboard />
   },
   {
     path: "/student/explore",
-    element: <ExploreClubs />,
+    element: <ExploreClubs />
   },
   {
     path: "/student/my-events",
-    element: <MyEvents />,
+    element: <MyEvents />
   },
   {
     path: "/student/settings",
-    element: <NotificationSettings />,
+    element: <NotificationSettings />
+  },
+  {
+    path: "/student/club/:id",
+    element: <ClubProfileView />
+  },
+  {
+    path: "/student/event/:id",
+    element: <EventRegistration />
   },
   {
     path: "/admin/login",
-    element: <AdminLogin />,
+    element: <AdminLogin />
   },
   {
     path: "/admin/dashboard",
-    element: <AdminDashboard />,
+    element: <AdminDashboard />
   },
   {
     path: "/admin/settings",
-    element: <AdminSettings />,
+    element: <AdminSettings />
   },
   {
     path: "/admin/announcements",
-    element: <Announcements />,
+    element: <Announcements />
   },
   {
     path: "/admin/club-approvals",
-    element: <ClubApprovals />,
+    element: <ClubApprovals />
   },
   {
     path: "/admin/club-management",
-    element: <ClubManagement />,
+    element: <ClubManagement />
   },
   {
     path: "/admin/export",
-    element: <ExportReports />,
+    element: <ExportReports />
   },
   {
     path: "/admin/reports",
-    element: <ReportsModeration />,
+    element: <ReportsModeration />
   },
   {
     path: "/admin/appeals",
-    element: <Appeals />,
+    element: <Appeals />
   },
   {
     path: "/club/login",
-    element: <ClubLogin />,
+    element: <ClubLogin />
   },
+  {
+    path: "*",
+    element: <NotFound />
+  }
 ]);
