@@ -10,6 +10,10 @@ import AdminLogin from "./pages/admin/AdminLogin";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminSettings from "./pages/admin/AdminSettings";
 import Announcements from "./pages/admin/Announcements";
+import ClubApprovals from "./pages/admin/ClubApprovals";
+import ClubManagement from "./pages/admin/ClubManagement";
+import ExportReports from "./pages/admin/ExportReports";
+import ReportsModeration from "./pages/admin/ReportsModeration";
 import ClubLogin from "./pages/club/ClubLogin";
 
 export const router = createBrowserRouter([
@@ -53,6 +57,22 @@ export const router = createBrowserRouter([
   {
     path: "/admin/announcements",
     element: <Announcements />,
+  },
+  {
+    path: "/admin/club-approvals",
+    element: <ClubApprovals />,
+  },
+  {
+    path: "/admin/club-management",
+    element: <ClubManagement />,
+  },
+  {
+    path: "/admin/export",
+    element: <ExportReports />,
+  },
+  {
+    path: "/admin/reports",
+    element: <ReportsModeration />,
   },
   {
     path: "/club/login",
