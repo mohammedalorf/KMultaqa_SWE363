@@ -1,23 +1,63 @@
-import * as React from "react"
+﻿import * as React from "react";
+
+const DialogContext = React.createContext(null);
+
+function useDialogContext() {
+  const context = React.useContext(DialogContext);
+  if (!context) {
+    throw new Error("Dialog components must be used within <Dialog>");
+  }
+  return context;
+}
 
 const Dialog = ({ open, onOpenChange, children }) => {
+  const [internalOpen, setInternalOpen] = React.useState(false);
+  const isControlled = open !== undefined;
+  const isOpen = isControlled ? open : internalOpen;
+
+  const setOpen = (nextOpen) => {
+    if (!isControlled) setInternalOpen(nextOpen);
+    onOpenChange?.(nextOpen);
+  };
+
+  return <DialogContext.Provider value={{ open: isOpen, setOpen }}>{children}</DialogContext.Provider>;
+};
+
+const DialogTrigger = ({ asChild = false, children, ...props }) => {
+  const { setOpen } = useDialogContext();
+
+  if (asChild && React.isValidElement(children)) {
+    return React.cloneElement(children, {
+      ...props,
+      onClick: (e) => {
+        children.props.onClick?.(e);
+        setOpen(true);
+      }
+    });
+  }
+
+  return (
+    <button type="button" onClick={() => setOpen(true)} {...props}>
+      {children}
+    </button>
+  );
+};
+
+const DialogContent = ({ children, className, ...props }) => {
+  const { open, setOpen } = useDialogContext();
   if (!open) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="fixed inset-0 bg-black/50" onClick={() => onOpenChange(false)} />
+      <div className="fixed inset-0 bg-black/50" onClick={() => setOpen(false)} />
       <div className="relative bg-background rounded-lg shadow-lg max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
-        {children}
+        <div className={`p-6 ${className || ""}`} {...props}>
+          {children}
+        </div>
       </div>
     </div>
   );
 };
-
-const DialogContent = ({ children, className, ...props }) => (
-  <div className={`p-6 ${className || ""}`} {...props}>
-    {children}
-  </div>
-);
 
 const DialogHeader = ({ children, className, ...props }) => (
   <div className={`mb-4 ${className || ""}`} {...props}>
@@ -37,4 +77,4 @@ const DialogFooter = ({ children, className, ...props }) => (
   </div>
 );
 
-export { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter };
+export { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogFooter };
