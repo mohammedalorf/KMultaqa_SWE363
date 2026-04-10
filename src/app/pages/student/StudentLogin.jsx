@@ -17,6 +17,7 @@ export default function StudentLogin() {
       registerText="Don't have an account?"
       registerButtonText="Register with University Email"
       onRegister={() => navigate("/student/register")}
+      onLogin={() => localStorage.setItem("userRole", "student")}
     />
   );
 }
