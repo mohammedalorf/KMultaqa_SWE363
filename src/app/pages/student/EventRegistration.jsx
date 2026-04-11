@@ -1,4 +1,4 @@
-﻿import { StudentLayout } from "../../components/layout/StudentLayout";
+import { StudentLayout } from "../../components/layout/StudentLayout";
 import { Card } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
@@ -9,6 +9,11 @@ import { useParams, useNavigate } from "react-router-dom";
 import { mockEvents } from "../../data/mockData";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
+import {
+  getRegisteredStudentEventById,
+  isStudentRegisteredForEvent,
+  registerStudentEvent
+} from "../../utils/studentEventRegistration";
 
 const navItems = [
   { label: "Feed", path: "/student/dashboard", icon: <Rss className="w-4 h-4" /> },
@@ -25,9 +30,19 @@ export default function EventRegistration() {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({});
   const [showConfirmation, setShowConfirmation] = useState(false);
-  const [registeredEventIds, setRegisteredEventIds] = useState([]);
 
-  const event = mockEvents.find((e) => String(e.id) === String(id));
+  const baseEvent = mockEvents.find((e) => String(e.id) === String(id));
+  const registeredEvent = getRegisteredStudentEventById(id);
+  const event = baseEvent
+    ? {
+        ...baseEvent,
+        club: baseEvent.clubName,
+        thumbnail: baseEvent.image,
+        capacity: baseEvent.maxAttendees,
+        registered: baseEvent.attendees
+      }
+    : registeredEvent;
+  const alreadyRegistered = event ? isStudentRegisteredForEvent(event.id) : false;
 
   const hasRegistration = event ? event.hasRegistration ?? true : false;
   const registrationFields =
@@ -47,13 +62,23 @@ export default function EventRegistration() {
   }, [event]);
 
   if (!event) {
-    return <div>Event not found</div>;
+    return (
+      <StudentLayout userName="Ahmed Al-Qahtani" navItems={navItems}>
+        <div className="max-w-3xl mx-auto">
+          <Card className="p-12 text-center">
+            <h2 className="text-2xl font-semibold mb-2">Event not found</h2>
+            <p className="text-muted-foreground mb-6">The event you tried to open is no longer available.</p>
+            <Button onClick={() => navigate("/student/my-events")}>Back to My Events</Button>
+          </Card>
+        </div>
+      </StudentLayout>
+    );
   }
 
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    if (registeredEventIds.includes(String(event.id))) {
+    if (alreadyRegistered) {
       toast.error("You are already registered for this event.");
       return;
     }
@@ -76,7 +101,7 @@ export default function EventRegistration() {
       return;
     }
 
-    setRegisteredEventIds((prev) => [...prev, String(event.id)]);
+    registerStudentEvent(event);
     setShowConfirmation(true);
     toast.success("Registration successful!");
 
@@ -109,9 +134,9 @@ export default function EventRegistration() {
           <div className="flex items-start gap-4">
             <div className="w-16 h-16 bg-accent rounded-full flex items-center justify-center text-3xl">{event.clubLogo}</div>
             <div className="flex-1">
-              <div className="text-sm text-muted-foreground mb-1">{event.clubName}</div>
+              <div className="text-sm text-muted-foreground mb-1">{event.clubName || event.club}</div>
               <h1 className="text-3xl font-bold mb-3">{event.title}</h1>
-              <p className="text-muted-foreground mb-4">{event.description}</p>
+              <p className="text-muted-foreground mb-4">{event.description || "Event details and registration information."}</p>
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="flex items-center gap-2 text-sm">
                   <Calendar className="w-4 h-4 text-muted-foreground" />
@@ -127,7 +152,7 @@ export default function EventRegistration() {
                 </div>
                 <div className="flex items-center gap-2 text-sm">
                   <Users className="w-4 h-4 text-muted-foreground" />
-                  <span>{event.registrations || event.attendees || 0} registered</span>
+                  <span>{event.registrations || event.attendees || event.registered || 0} registered</span>
                 </div>
               </div>
               {deadlineClosed && <p className="text-sm text-red-600 mt-3">Registration closed: deadline has passed.</p>}
@@ -168,8 +193,8 @@ export default function EventRegistration() {
               ))}
 
               <div className="pt-4">
-                <Button type="submit" className="w-full" size="lg" disabled={deadlineClosed}>
-                  Complete Registration
+                <Button type="submit" className="w-full" size="lg" disabled={deadlineClosed || alreadyRegistered}>
+                  {alreadyRegistered ? "Already Registered" : "Complete Registration"}
                 </Button>
               </div>
             </form>
