@@ -1,5 +1,7 @@
 # KFUPM Multaqa Platform
 
+KFUPM Multaqa Platform is a web platform for managing student clubs, events, announcements, approvals, and student engagement. It provides separate dashboards for admins, clubs, and students.
+
 
 ## Folder structure
 
@@ -44,6 +46,12 @@ npm run build
 npm run preview
 ```
 
+## Usage instructions and examples
+
+Admin logs in at /admin/login to manage clubs, reports, announcements, and appeals.
+Club representatives log in at /club/login to create posts, manage events, and track followers.
+Students log in at /student/login to explore clubs, view events, and manage their registrations.
+
 ## Main routes
 
 - `/`
@@ -75,3 +83,9 @@ npm run preview
 - `/student/settings`
 - `/student/my-events`
 
+
+## Team Members
+- Abdulmalik Al AlShaikh
+- ABDULAZIZ MAHMOUD
+- EYAD ALKHALIFA
+- MOHAMMED ALORF
