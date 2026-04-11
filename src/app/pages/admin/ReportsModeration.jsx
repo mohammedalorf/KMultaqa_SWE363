@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../../components/ui/dialog";
 import { Textarea } from "../../components/ui/textarea";
 import { Label } from "../../components/ui/label";
-import { LayoutDashboard, CheckSquare, Flag, Users, Megaphone, Scale, FileText, Settings, AlertTriangle, Eye, Trash2, EyeOff, Ban, X } from "lucide-react";
+import { LayoutDashboard, CheckSquare, Flag, Users, Megaphone, Scale, FileText, Eye, Trash2, Ban } from "lucide-react";
 import { useState } from "react";
 import { mockReports } from "../../data/mockData";
 import { toast } from "sonner";
@@ -18,11 +18,10 @@ const sidebarItems = [
   { label: "Club Management", path: "/admin/club-management", icon: <Users className="w-4 h-4 mr-2" /> },
   { label: "Announcements", path: "/admin/announcements", icon: <Megaphone className="w-4 h-4 mr-2" /> },
   { label: "Appeals", path: "/admin/appeals", icon: <Scale className="w-4 h-4 mr-2" /> },
-  { label: "Export Reports", path: "/admin/export", icon: <FileText className="w-4 h-4 mr-2" /> },
-  { label: "Settings", path: "/admin/settings", icon: <Settings className="w-4 h-4 mr-2" /> }
+  { label: "Export Reports", path: "/admin/export", icon: <FileText className="w-4 h-4 mr-2" /> }
 ];
 
-const actionableStates = ["new", "in-review"];
+const actionableStates = ["new"];
 
 export default function ReportsModeration() {
   const [reports, setReports] = useState(mockReports);
@@ -45,13 +44,13 @@ export default function ReportsModeration() {
     if (!selectedReport) return;
 
     if (!actionableStates.includes(selectedReport.status)) {
-      toast.error("Only reports in New or In Review state can be moderated.");
+      toast.error("Only reports in New state can be moderated.");
       return;
     }
 
-    const requiresPolicyCategory = action === "Remove Post" || action === "Hide Content";
+    const requiresPolicyCategory = action === "Remove Post";
     if (requiresPolicyCategory && !policyCategory) {
-      toast.error("Policy category is required for hide/remove actions.");
+      toast.error("Policy category is required for removing a post.");
       return;
     }
 
@@ -86,14 +85,10 @@ export default function ReportsModeration() {
           <p className="text-muted-foreground">Review and moderate reported content</p>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-4">
+        <div className="grid md:grid-cols-2 gap-4">
           <Card className="p-4">
             <div className="text-2xl font-bold text-red-600">{reports.filter((r) => r.status === "new").length}</div>
             <div className="text-sm text-muted-foreground">New Reports</div>
-          </Card>
-          <Card className="p-4">
-            <div className="text-2xl font-bold text-amber-600">{reports.filter((r) => r.status === "in-review").length}</div>
-            <div className="text-sm text-muted-foreground">In Review</div>
           </Card>
           <Card className="p-4">
             <div className="text-2xl font-bold text-green-600">{reports.filter((r) => r.status === "resolved").length}</div>
@@ -111,7 +106,6 @@ export default function ReportsModeration() {
               <SelectContent>
                 <SelectItem value="all">All Reports</SelectItem>
                 <SelectItem value="new">New</SelectItem>
-                <SelectItem value="in-review">In Review</SelectItem>
                 <SelectItem value="resolved">Resolved</SelectItem>
               </SelectContent>
             </Select>
@@ -166,17 +160,7 @@ export default function ReportsModeration() {
       <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <div className="flex items-center justify-between">
-              <DialogTitle>Report Details</DialogTitle>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowDetailsDialog(false)}
-                className="h-6 w-6 p-0"
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
+            <DialogTitle>Report Details</DialogTitle>
           </DialogHeader>
           {selectedReport && (
             <div className="space-y-4">
@@ -195,7 +179,7 @@ export default function ReportsModeration() {
               <div>
                 <Label>Status</Label>
                 <div className="font-medium">{selectedReport.status}</div>
-                {!canApplyAction && <p className="text-xs text-red-600 mt-1">Report state is not actionable. Only New/In Review can be moderated.</p>}
+                {!canApplyAction && <p className="text-xs text-red-600 mt-1">Report state is not actionable. Only New reports can be moderated.</p>}
               </div>
               <div>
                 <Label>Target Content/Club</Label>
@@ -214,7 +198,7 @@ export default function ReportsModeration() {
                 <div className="p-3 bg-accent rounded-lg">{selectedReport.comment}</div>
               </div>
               <div>
-                <Label htmlFor="policyCategory">Policy Category (required for Hide/Remove)</Label>
+                <Label htmlFor="policyCategory">Policy Category (required for Remove Post)</Label>
                 <Select value={policyCategory} onValueChange={setPolicyCategory}>
                   <SelectTrigger id="policyCategory">
                     <SelectValue placeholder="Select policy category" />
@@ -238,14 +222,6 @@ export default function ReportsModeration() {
             <Button variant="outline" onClick={() => handleAction("Remove Post")} className="w-full sm:w-auto" disabled={!canApplyAction}>
               <Trash2 className="w-4 h-4 mr-2" />
               Remove Post
-            </Button>
-            <Button variant="outline" onClick={() => handleAction("Hide Content")} className="w-full sm:w-auto" disabled={!canApplyAction}>
-              <EyeOff className="w-4 h-4 mr-2" />
-              Hide Content
-            </Button>
-            <Button variant="outline" onClick={() => handleAction("Warn Club")} className="w-full sm:w-auto" disabled={!canApplyAction}>
-              <AlertTriangle className="w-4 h-4 mr-2" />
-              Warn Club
             </Button>
             <Button variant="destructive" onClick={() => handleAction("Suspend Club") } className="w-full sm:w-auto" disabled={!canApplyAction}>
               <Ban className="w-4 h-4 mr-2" />

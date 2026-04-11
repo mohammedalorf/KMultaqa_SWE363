@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../../components/ui/dialog";
 import { Textarea } from "../../components/ui/textarea";
 import { Label } from "../../components/ui/label";
-import { LayoutDashboard, CheckSquare, Flag, Users, Megaphone, Scale, FileText, Settings, Search, AlertTriangle } from "lucide-react";
+import { LayoutDashboard, CheckSquare, Flag, Users, Megaphone, Scale, FileText, Search } from "lucide-react";
 import { useMemo, useState } from "react";
 import { mockClubs } from "../../data/mockData";
 import { toast } from "sonner";
@@ -19,13 +19,11 @@ const sidebarItems = [
   { label: "Club Management", path: "/admin/club-management", icon: <Users className="w-4 h-4 mr-2" /> },
   { label: "Announcements", path: "/admin/announcements", icon: <Megaphone className="w-4 h-4 mr-2" /> },
   { label: "Appeals", path: "/admin/appeals", icon: <Scale className="w-4 h-4 mr-2" /> },
-  { label: "Export Reports", path: "/admin/export", icon: <FileText className="w-4 h-4 mr-2" /> },
-  { label: "Settings", path: "/admin/settings", icon: <Settings className="w-4 h-4 mr-2" /> }
+  { label: "Export Reports", path: "/admin/export", icon: <FileText className="w-4 h-4 mr-2" /> }
 ];
 
 const transitionGuidance = {
   active: "Active clubs can access all features. Use when the club is compliant.",
-  restricted: "Restricted clubs can stay visible but should have limited posting privileges.",
   suspended: "Suspended clubs should be temporarily blocked from publishing and critical actions."
 };
 
@@ -34,12 +32,9 @@ export default function ClubManagement() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedClub, setSelectedClub] = useState(null);
   const [showStatusDialog, setShowStatusDialog] = useState(false);
-  const [showWarningDialog, setShowWarningDialog] = useState(false);
   const [newStatus, setNewStatus] = useState("");
   const [statusReason, setStatusReason] = useState("");
-  const [warningMessage, setWarningMessage] = useState("");
-  const [warningType, setWarningType] = useState("");
-  const [warningEvidence, setWarningEvidence] = useState("");
+  const [statusReasonError, setStatusReasonError] = useState("");
   const [statusHistory, setStatusHistory] = useState(() =>
     mockClubs.reduce((acc, club) => {
       acc[club.id] = [
@@ -62,23 +57,17 @@ export default function ClubManagement() {
     setSelectedClub(club);
     setNewStatus(club.status);
     setStatusReason("");
+    setStatusReasonError("");
     setShowStatusDialog(true);
-  };
-
-  const handleIssueWarning = (club) => {
-    setSelectedClub(club);
-    setWarningMessage("");
-    setWarningType("");
-    setWarningEvidence("");
-    setShowWarningDialog(true);
   };
 
   const confirmStatusChange = () => {
     if (!selectedClub || !newStatus) return;
 
-    const reasonRequired = newStatus === "restricted" || newStatus === "suspended";
+    const reasonRequired = newStatus === "suspended";
     if (reasonRequired && !statusReason.trim()) {
-      toast.error("Reason is required for restricted/suspended status.");
+      setStatusReasonError("Reason is required when suspending a club.");
+      toast.error("Reason is required for suspended status.");
       return;
     }
 
@@ -99,25 +88,7 @@ export default function ClubManagement() {
     setShowStatusDialog(false);
     setSelectedClub(null);
     setStatusReason("");
-  };
-
-  const confirmWarning = () => {
-    if (!selectedClub) return;
-    if (!warningType) {
-      toast.error("Warning type is required.");
-      return;
-    }
-    if (!warningMessage.trim()) {
-      toast.error("Warning message is required.");
-      return;
-    }
-
-    toast.success(`Warning (${warningType}) sent to ${selectedClub.name}`);
-    setShowWarningDialog(false);
-    setSelectedClub(null);
-    setWarningMessage("");
-    setWarningType("");
-    setWarningEvidence("");
+    setStatusReasonError("");
   };
 
   const selectedHistory = selectedClub ? statusHistory[selectedClub.id] || [] : [];
@@ -146,7 +117,7 @@ export default function ClubManagement() {
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
                       <h3 className="text-xl font-semibold">{club.name}</h3>
-                      <Badge variant={club.status === "active" ? "default" : club.status === "restricted" ? "secondary" : "destructive"}>
+                      <Badge variant={club.status === "active" ? "default" : "destructive"}>
                         {club.status}
                       </Badge>
                     </div>
@@ -161,10 +132,6 @@ export default function ClubManagement() {
                 <div className="flex flex-col gap-2 ml-4">
                   <Button variant="outline" size="sm" onClick={() => handleChangeStatus(club)}>
                     Change Status
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={() => handleIssueWarning(club)}>
-                    <AlertTriangle className="w-4 h-4 mr-1" />
-                    Issue Warning
                   </Button>
                 </div>
               </div>
@@ -185,21 +152,41 @@ export default function ClubManagement() {
             </div>
             <div>
               <Label>New Status</Label>
-              <Select value={newStatus} onValueChange={setNewStatus}>
+              <Select
+                value={newStatus}
+                onValueChange={(value) => {
+                  setNewStatus(value);
+                  if (value !== "suspended") {
+                    setStatusReasonError("");
+                  }
+                }}
+              >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="restricted">Restricted</SelectItem>
                   <SelectItem value="suspended">Suspended</SelectItem>
                 </SelectContent>
               </Select>
               {newStatus && <p className="text-xs text-muted-foreground mt-2">{transitionGuidance[newStatus]}</p>}
             </div>
             <div>
-              <Label htmlFor="reason">Reason {newStatus === "restricted" || newStatus === "suspended" ? "(required)" : "(optional)"}</Label>
-              <Textarea id="reason" placeholder="Provide a reason for this status change..." value={statusReason} onChange={(e) => setStatusReason(e.target.value)} rows={3} />
+              <Label htmlFor="reason">Reason {newStatus === "suspended" ? "(required)" : "(optional)"}</Label>
+              <Textarea
+                id="reason"
+                placeholder="Provide a reason for this status change..."
+                value={statusReason}
+                onChange={(e) => {
+                  setStatusReason(e.target.value);
+                  if (e.target.value.trim()) {
+                    setStatusReasonError("");
+                  }
+                }}
+                rows={3}
+                className={statusReasonError ? "border-red-500 focus-visible:ring-red-500" : ""}
+              />
+              {statusReasonError && <p className="mt-2 text-xs text-red-600">{statusReasonError}</p>}
             </div>
             <div>
               <Label>Status History</Label>
@@ -220,52 +207,8 @@ export default function ClubManagement() {
             </Button>
             <Button
               onClick={confirmStatusChange}
-              disabled={(newStatus === "restricted" || newStatus === "suspended") && !statusReason.trim()}
             >
               Confirm Change
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={showWarningDialog} onOpenChange={setShowWarningDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Issue Warning to Club</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label>Club</Label>
-              <div className="font-semibold">{selectedClub?.name}</div>
-            </div>
-            <div>
-              <Label htmlFor="warningType">Warning Type (required)</Label>
-              <Select value={warningType} onValueChange={setWarningType}>
-                <SelectTrigger id="warningType">
-                  <SelectValue placeholder="Select warning type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="policy-violation">Policy Violation</SelectItem>
-                  <SelectItem value="misconduct">Misconduct</SelectItem>
-                  <SelectItem value="repeated-offense">Repeated Offense</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="warning">Warning Message (required)</Label>
-              <Textarea id="warning" placeholder="Enter warning message..." value={warningMessage} onChange={(e) => setWarningMessage(e.target.value)} rows={4} />
-            </div>
-            <div>
-              <Label htmlFor="evidence">Evidence / Report Reference (optional)</Label>
-              <Input id="evidence" placeholder="e.g., REP-102 or link to evidence" value={warningEvidence} onChange={(e) => setWarningEvidence(e.target.value)} />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowWarningDialog(false)}>
-              Cancel
-            </Button>
-            <Button variant="destructive" onClick={confirmWarning} disabled={!warningType || !warningMessage.trim()}>
-              Send Warning
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -13,7 +13,6 @@ import EventRegistration from "./pages/student/EventRegistration";
 
 import AdminLogin from "./pages/admin/AdminLogin";
 import AdminDashboard from "./pages/admin/AdminDashboard";
-import AdminSettings from "./pages/admin/AdminSettings";
 import Announcements from "./pages/admin/Announcements";
 import ClubApprovals from "./pages/admin/ClubApprovals";
 import ClubManagement from "./pages/admin/ClubManagement";
@@ -57,7 +56,6 @@ export const router = createBrowserRouter([
 
   { path: "/admin/login", element: <AdminLogin /> },
   { path: "/admin/dashboard", element: guard("admin", <AdminDashboard />) },
-  { path: "/admin/settings", element: guard("admin", <AdminSettings />) },
   { path: "/admin/announcements", element: guard("admin", <Announcements />) },
   { path: "/admin/club-approvals", element: guard("admin", <ClubApprovals />) },
   { path: "/admin/club-management", element: guard("admin", <ClubManagement />) },

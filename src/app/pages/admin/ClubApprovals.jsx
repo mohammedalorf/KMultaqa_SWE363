@@ -5,7 +5,7 @@ import { Badge } from "../../components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../../components/ui/dialog";
 import { Textarea } from "../../components/ui/textarea";
 import { Label } from "../../components/ui/label";
-import { LayoutDashboard, CheckSquare, Flag, Users, Megaphone, Scale, FileText, Settings, Check, X, Eye } from "lucide-react";
+import { LayoutDashboard, CheckSquare, Flag, Users, Megaphone, Scale, FileText, Check, X, Eye } from "lucide-react";
 import { useState } from "react";
 import { mockApprovals } from "../../data/mockData";
 import { toast } from "sonner";
@@ -17,8 +17,7 @@ const sidebarItems = [
   { label: "Club Management", path: "/admin/club-management", icon: <Users className="w-4 h-4 mr-2" /> },
   { label: "Announcements", path: "/admin/announcements", icon: <Megaphone className="w-4 h-4 mr-2" /> },
   { label: "Appeals", path: "/admin/appeals", icon: <Scale className="w-4 h-4 mr-2" /> },
-  { label: "Export Reports", path: "/admin/export", icon: <FileText className="w-4 h-4 mr-2" /> },
-  { label: "Settings", path: "/admin/settings", icon: <Settings className="w-4 h-4 mr-2" /> }
+  { label: "Export Reports", path: "/admin/export", icon: <FileText className="w-4 h-4 mr-2" /> }
 ];
 
 export default function ClubApprovals() {
@@ -152,17 +151,7 @@ export default function ClubApprovals() {
       <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <div className="flex items-center justify-between">
-              <DialogTitle>Club Approval Request Details</DialogTitle>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowDetailsDialog(false)}
-                className="h-6 w-6 p-0"
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
+            <DialogTitle>Club Approval Request Details</DialogTitle>
           </DialogHeader>
           {selectedApproval && (
             <div className="space-y-4">

@@ -5,7 +5,7 @@ import { Badge } from "../../components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../../components/ui/dialog";
 import { Textarea } from "../../components/ui/textarea";
 import { Label } from "../../components/ui/label";
-import { LayoutDashboard, CheckSquare, Flag, Users, Megaphone, Scale, FileText, Settings, Eye, Check, X, Wrench } from "lucide-react";
+import { LayoutDashboard, CheckSquare, Flag, Users, Megaphone, Scale, FileText, Eye, Check, X } from "lucide-react";
 import { useState } from "react";
 import { mockAppeals } from "../../data/mockData";
 import { toast } from "sonner";
@@ -17,31 +17,44 @@ const sidebarItems = [
   { label: "Club Management", path: "/admin/club-management", icon: <Users className="w-4 h-4 mr-2" /> },
   { label: "Announcements", path: "/admin/announcements", icon: <Megaphone className="w-4 h-4 mr-2" /> },
   { label: "Appeals", path: "/admin/appeals", icon: <Scale className="w-4 h-4 mr-2" /> },
-  { label: "Export Reports", path: "/admin/export", icon: <FileText className="w-4 h-4 mr-2" /> },
-  { label: "Settings", path: "/admin/settings", icon: <Settings className="w-4 h-4 mr-2" /> }
+  { label: "Export Reports", path: "/admin/export", icon: <FileText className="w-4 h-4 mr-2" /> }
 ];
+
+const statusLabels = {
+  pending: "Pending",
+  accepted: "Accepted",
+  denied: "Denied"
+};
 
 export default function Appeals() {
   const [appeals, setAppeals] = useState(mockAppeals);
   const [selectedAppeal, setSelectedAppeal] = useState(null);
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
   const [explanation, setExplanation] = useState("");
+  const [explanationError, setExplanationError] = useState("");
 
   const handleViewAppeal = (appeal) => {
     setSelectedAppeal(appeal);
+    setExplanation("");
+    setExplanationError("");
     setShowDetailsDialog(true);
   };
 
   const handleDecision = (decision) => {
-    if (!selectedAppeal || !explanation.trim()) return;
+    if (!selectedAppeal) return;
+    if (!explanation.trim()) {
+      setExplanationError("Explanation is required before you accept or deny an appeal.");
+      toast.error("Explanation is required.");
+      return;
+    }
 
     setAppeals((prev) => prev.map((a) => (a.id === selectedAppeal.id ? { ...a, status: decision, adminExplanation: explanation.trim() } : a)));
 
-    const label = decision === "overturned" ? "overturned" : decision === "modified" ? "modified" : "upheld";
-    toast.success(`Appeal ${label} successfully`);
+    toast.success(`Appeal ${decision} successfully`);
     setShowDetailsDialog(false);
     setSelectedAppeal(null);
     setExplanation("");
+    setExplanationError("");
   };
 
   return (
@@ -52,22 +65,18 @@ export default function Appeals() {
           <p className="text-muted-foreground">Review and handle appeal requests from clubs</p>
         </div>
 
-        <div className="grid md:grid-cols-4 gap-4">
+        <div className="grid md:grid-cols-3 gap-4">
           <Card className="p-4">
             <div className="text-2xl font-bold">{appeals.filter((a) => a.status === "pending").length}</div>
             <div className="text-sm text-muted-foreground">Pending Appeals</div>
           </Card>
           <Card className="p-4">
-            <div className="text-2xl font-bold">{appeals.filter((a) => a.status === "upheld").length}</div>
-            <div className="text-sm text-muted-foreground">Upheld</div>
+            <div className="text-2xl font-bold">{appeals.filter((a) => a.status === "accepted").length}</div>
+            <div className="text-sm text-muted-foreground">Accepted</div>
           </Card>
           <Card className="p-4">
-            <div className="text-2xl font-bold">{appeals.filter((a) => a.status === "overturned").length}</div>
-            <div className="text-sm text-muted-foreground">Overturned</div>
-          </Card>
-          <Card className="p-4">
-            <div className="text-2xl font-bold">{appeals.filter((a) => a.status === "modified").length}</div>
-            <div className="text-sm text-muted-foreground">Modified</div>
+            <div className="text-2xl font-bold">{appeals.filter((a) => a.status === "denied").length}</div>
+            <div className="text-sm text-muted-foreground">Denied</div>
           </Card>
         </div>
 
@@ -94,8 +103,8 @@ export default function Appeals() {
                     <td className="p-4 text-muted-foreground">{appeal.originalDecision.substring(0, 50)}...</td>
                     <td className="p-4 text-muted-foreground">{new Date(appeal.submittedAt).toLocaleDateString()}</td>
                     <td className="p-4">
-                      <Badge variant={appeal.status === "pending" ? "secondary" : appeal.status === "overturned" ? "default" : "outline"}>
-                        {appeal.status}
+                      <Badge variant={appeal.status === "pending" ? "secondary" : appeal.status === "accepted" ? "default" : "outline"}>
+                        {statusLabels[appeal.status] || appeal.status}
                       </Badge>
                     </td>
                     <td className="p-4">
@@ -115,17 +124,7 @@ export default function Appeals() {
       <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <div className="flex items-center justify-between">
-              <DialogTitle>Appeal Review</DialogTitle>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowDetailsDialog(false)}
-                className="h-6 w-6 p-0"
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
+            <DialogTitle>Appeal Review</DialogTitle>
           </DialogHeader>
           {selectedAppeal && (
             <div className="space-y-4">
@@ -151,24 +150,33 @@ export default function Appeals() {
               </div>
               <div>
                 <Label htmlFor="explanation">Your Explanation (required)</Label>
-                <Textarea id="explanation" placeholder="Provide an explanation for your decision..." value={explanation} onChange={(e) => setExplanation(e.target.value)} rows={4} />
+                <Textarea
+                  id="explanation"
+                  placeholder="Provide an explanation for your decision..."
+                  value={explanation}
+                  onChange={(e) => {
+                    setExplanation(e.target.value);
+                    if (e.target.value.trim()) {
+                      setExplanationError("");
+                    }
+                  }}
+                  rows={4}
+                  className={explanationError ? "border-red-500 focus-visible:ring-red-500" : ""}
+                />
+                {explanationError && <p className="mt-2 text-xs text-red-600">{explanationError}</p>}
               </div>
             </div>
           )}
           <DialogFooter>
             {selectedAppeal?.status === "pending" && (
               <>
-                <Button variant="outline" onClick={() => handleDecision("upheld")} disabled={!explanation.trim()}>
+                <Button variant="outline" onClick={() => handleDecision("denied")}>
                   <X className="w-4 h-4 mr-2" />
-                  Uphold Original Decision
+                  Deny
                 </Button>
-                <Button onClick={() => handleDecision("overturned")} disabled={!explanation.trim()}>
+                <Button onClick={() => handleDecision("accepted")}>
                   <Check className="w-4 h-4 mr-2" />
-                  Overturn Decision
-                </Button>
-                <Button variant="secondary" onClick={() => handleDecision("modified")} disabled={!explanation.trim()}>
-                  <Wrench className="w-4 h-4 mr-2" />
-                  Modify Decision
+                  Accept
                 </Button>
               </>
             )}

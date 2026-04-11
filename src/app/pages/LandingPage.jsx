@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { Button } from "../components/ui/button";
 import { Card } from "../components/ui/card";
-import { ShieldCheck, Users, Calendar } from "lucide-react";
+import { ShieldCheck, Users, School } from "lucide-react";
 
 export default function LandingPage() {
   return (
@@ -40,12 +40,12 @@ export default function LandingPage() {
               <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
                 <Users className="w-8 h-8 text-primary" />
               </div>
-              <h3 className="text-2xl font-semibold">Club Representative</h3>
+              <h3 className="text-2xl font-semibold">Student</h3>
               <p className="text-muted-foreground">
-                Manage your club profile, publish posts, and organize events
+                Follow clubs, register for events, and stay updated with campus activities
               </p>
-              <Link to="/club/login" className="w-full">
-                <Button className="w-full">Club Login</Button>
+              <Link to="/student/login" className="w-full">
+                <Button className="w-full">Student Login</Button>
               </Link>
             </div>
           </Card>
@@ -53,14 +53,14 @@ export default function LandingPage() {
           <Card className="p-8 hover:shadow-lg transition-shadow">
             <div className="flex flex-col items-center text-center space-y-4">
               <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
-                <Calendar className="w-8 h-8 text-primary" />
+                <School className="w-8 h-8 text-primary" />
               </div>
-              <h3 className="text-2xl font-semibold">Student</h3>
+              <h3 className="text-2xl font-semibold">Club Representative</h3>
               <p className="text-muted-foreground">
-                Follow clubs, register for events, and stay updated with campus activities
+                Manage your club profile, publish posts, and organize events
               </p>
-              <Link to="/student/login" className="w-full">
-                <Button className="w-full">Student Login</Button>
+              <Link to="/club/login" className="w-full">
+                <Button className="w-full">Club Login</Button>
               </Link>
             </div>
           </Card>

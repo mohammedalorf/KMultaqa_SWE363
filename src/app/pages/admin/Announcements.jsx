@@ -4,10 +4,8 @@ import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Textarea } from "../../components/ui/textarea";
 import { Label } from "../../components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../../components/ui/dialog";
-import { LayoutDashboard, CheckSquare, Flag, Users, Megaphone, Scale, FileText, Settings, Send, Eye } from "lucide-react";
-import { useMemo, useState } from "react";
+import { LayoutDashboard, CheckSquare, Flag, Users, Megaphone, Scale, FileText, Send } from "lucide-react";
+import { useState } from "react";
 import { toast } from "sonner";
 
 const sidebarItems = [
@@ -17,8 +15,7 @@ const sidebarItems = [
   { label: "Club Management", path: "/admin/club-management", icon: <Users className="w-4 h-4 mr-2" /> },
   { label: "Announcements", path: "/admin/announcements", icon: <Megaphone className="w-4 h-4 mr-2" /> },
   { label: "Appeals", path: "/admin/appeals", icon: <Scale className="w-4 h-4 mr-2" /> },
-  { label: "Export Reports", path: "/admin/export", icon: <FileText className="w-4 h-4 mr-2" /> },
-  { label: "Settings", path: "/admin/settings", icon: <Settings className="w-4 h-4 mr-2" /> }
+  { label: "Export Reports", path: "/admin/export", icon: <FileText className="w-4 h-4 mr-2" /> }
 ];
 
 const TITLE_MIN = 8;
@@ -29,11 +26,6 @@ const CONTENT_MAX = 2000;
 export default function Announcements() {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
-  const [audience, setAudience] = useState("all");
-  const [publishDate, setPublishDate] = useState("");
-  const [showPreview, setShowPreview] = useState(false);
-
-  const todayIso = useMemo(() => new Date().toISOString().slice(0, 10), []);
 
   const validateAnnouncement = () => {
     const titleTrimmed = title.trim();
@@ -47,10 +39,6 @@ export default function Announcements() {
       return `Content must be between ${CONTENT_MIN} and ${CONTENT_MAX} characters.`;
     }
 
-    if (publishDate && publishDate <= todayIso) {
-      return "Scheduled publish date must be in the future.";
-    }
-
     return "";
   };
 
@@ -61,22 +49,9 @@ export default function Announcements() {
       return;
     }
 
-    toast.success(publishDate ? "Announcement scheduled successfully!" : "Announcement published successfully!");
+    toast.success("Announcement published successfully!");
     setTitle("");
     setContent("");
-    setAudience("all");
-    setPublishDate("");
-    setShowPreview(false);
-  };
-
-  const handlePreview = () => {
-    const validationError = validateAnnouncement();
-    if (validationError) {
-      toast.error(validationError);
-      return;
-    }
-
-    setShowPreview(true);
   };
 
   return (
@@ -109,36 +84,10 @@ export default function Announcements() {
                 <p className="text-xs text-muted-foreground mt-1">{content.trim().length}/{CONTENT_MAX} characters</p>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="audience">Audience</Label>
-                  <Select value={audience} onValueChange={setAudience}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Users</SelectItem>
-                      <SelectItem value="students">Students Only</SelectItem>
-                      <SelectItem value="clubs">Clubs Only</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label htmlFor="publishDate">Publish Date (Optional)</Label>
-                  <Input id="publishDate" type="date" min={todayIso} value={publishDate} onChange={(e) => setPublishDate(e.target.value)} />
-                  <p className="text-xs text-muted-foreground mt-1">If set, date must be after today.</p>
-                </div>
-              </div>
-
-              <div className="flex gap-2 pt-4">
+              <div className="pt-4">
                 <Button onClick={handlePublish} className="flex-1">
                   <Send className="w-4 h-4 mr-2" />
-                  {publishDate ? "Schedule" : "Publish Now"}
-                </Button>
-                <Button variant="outline" onClick={handlePreview}>
-                  <Eye className="w-4 h-4 mr-2" />
-                  Preview
+                  Publish Now
                 </Button>
               </div>
             </div>
@@ -165,33 +114,6 @@ export default function Announcements() {
         </div>
       </div>
 
-      <Dialog open={showPreview} onOpenChange={setShowPreview}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Announcement Preview</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3">
-            <div>
-              <div className="text-xs text-muted-foreground">Audience</div>
-              <div className="font-medium capitalize">{audience}</div>
-            </div>
-            <div>
-              <div className="text-xs text-muted-foreground">Title</div>
-              <h3 className="text-xl font-semibold">{title}</h3>
-            </div>
-            <div>
-              <div className="text-xs text-muted-foreground">Content</div>
-              <p className="text-sm whitespace-pre-wrap">{content}</p>
-            </div>
-            {publishDate && (
-              <div>
-                <div className="text-xs text-muted-foreground">Scheduled Date</div>
-                <div className="font-medium">{publishDate}</div>
-              </div>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
     </DashboardLayout>
   );
 }

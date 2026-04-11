@@ -1,6 +1,6 @@
 import { DashboardLayout } from "../../components/layout/DashboardLayout";
 import { Card } from "../../components/ui/card";
-import { LayoutDashboard, CheckSquare, Flag, Users, Megaphone, Scale, FileText, Settings, } from "lucide-react";
+import { LayoutDashboard, CheckSquare, Flag, Users, Megaphone, Scale, FileText } from "lucide-react";
 import { mockClubs, mockEvents, mockReports, mockApprovals } from "../../data/mockData";
 
 const sidebarItems = [
@@ -11,14 +11,13 @@ const sidebarItems = [
     { label: "Announcements", path: "/admin/announcements", icon: <Megaphone className="w-4 h-4 mr-2"/> },
     { label: "Appeals", path: "/admin/appeals", icon: <Scale className="w-4 h-4 mr-2"/> },
     { label: "Export Reports", path: "/admin/export", icon: <FileText className="w-4 h-4 mr-2"/> },
-    { label: "Settings", path: "/admin/settings", icon: <Settings className="w-4 h-4 mr-2"/> },
 ];
 
 export default function AdminDashboard() {
     const totalClubs = mockClubs.length;
     const pendingApprovals = mockApprovals.filter((a) => a.status === "pending").length;
     const activeEvents = mockEvents.length;
-    const openReports = mockReports.filter((r) => r.status === "new" || r.status === "in-review").length;
+    const openReports = mockReports.filter((r) => r.status === "new").length;
 
     return (
         <DashboardLayout role="admin" userName="Dr. Abdullah Al-Mutairi" sidebarItems={sidebarItems}>
@@ -138,9 +137,7 @@ export default function AdminDashboard() {
                                     <div className={`px-3 py-1 rounded-full text-xs ${
                                         club.status === "active"
                                             ? "bg-green-100 text-green-800"
-                                            : club.status === "restricted"
-                                                ? "bg-amber-100 text-amber-800"
-                                                : "bg-gray-100 text-gray-800"
+                                            : "bg-red-100 text-red-800"
                                     }`}>
                                         {club.status || "active"}
                                     </div>
