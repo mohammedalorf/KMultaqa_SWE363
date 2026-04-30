@@ -23,7 +23,7 @@ const registrationFieldSchema = new Schema(
     fieldType: {
       type: String,
       required: true,
-      enum: ['text', 'number', 'email', 'select', 'checkbox'],
+      enum: ['text', 'number', 'email', 'select', 'checkbox', 'radio'],
     },
     required: {
       type: Boolean,

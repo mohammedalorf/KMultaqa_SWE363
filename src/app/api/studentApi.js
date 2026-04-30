@@ -17,6 +17,14 @@ export function getStudentClubProfile(clubId) {
   return apiClient.get(`/student/clubs/${clubId}`);
 }
 
+export function likeStudentPost(postId) {
+  return apiClient.post(`/student/posts/${postId}/like`);
+}
+
+export function unlikeStudentPost(postId) {
+  return apiClient.delete(`/student/posts/${postId}/like`);
+}
+
 export function followStudentClub(clubId) {
   return apiClient.post(`/student/clubs/${clubId}/follow`);
 }

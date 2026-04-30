@@ -26,6 +26,12 @@ const postSchema = new Schema({
     type: Boolean,
     default: false,
   },
+  likes: [
+    {
+      type: Schema.Types.ObjectId,
+      ref: 'Student',
+    },
+  ],
   status: {
     type: String,
     enum: ['active', 'hidden'],

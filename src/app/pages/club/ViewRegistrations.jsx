@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { toast } from "sonner";
-import { Calendar, Download, Search, Users } from "lucide-react";
+import { Calendar, Download, Eye, Search, Users } from "lucide-react";
 import { PageContainer } from "../../components/layout/PageContainer";
 import { PageHeader } from "../../components/layout/PageHeader";
 import { Section } from "../../components/layout/Section";
@@ -12,6 +12,7 @@ import { DataTable, DataTableHead, DataTableBody, DataTh, DataTr, DataTd } from 
 import { Button } from "../../components/ui/button";
 import { Card } from "../../components/ui/card";
 import { Input } from "../../components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../../components/ui/dialog";
 import { getApiErrorMessage } from "../../api/apiClient";
 import { getClubEventRegistrations } from "../../api/clubApi";
 
@@ -49,6 +50,7 @@ export default function ViewRegistrations() {
   const [registrations, setRegistrations] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
+  const [selectedRegistration, setSelectedRegistration] = useState(null);
 
   const loadRegistrations = async () => {
     setIsLoading(true);
@@ -85,8 +87,6 @@ export default function ViewRegistrations() {
         registration.email.toLowerCase().includes(query)
     );
   }, [registrations, searchQuery]);
-
-  const hasAnswers = registrations.some((registration) => registration.answers?.length > 0);
 
   const handleExport = () => {
     const rows = [
@@ -183,7 +183,7 @@ export default function ViewRegistrations() {
               <DataTh>Student ID</DataTh>
               <DataTh>Email</DataTh>
               <DataTh>Registered At</DataTh>
-              {hasAnswers && <DataTh>Answers</DataTh>}
+              <DataTh align="right">Actions</DataTh>
             </DataTableHead>
             <DataTableBody>
               {filteredRegistrations.map((registration) => (
@@ -194,21 +194,56 @@ export default function ViewRegistrations() {
                   <DataTd className="text-[var(--muted-foreground)]">
                     {formatDateTime(registration.registeredAt)}
                   </DataTd>
-                  {hasAnswers && (
-                    <DataTd className="text-[var(--muted-foreground)]">
-                      {(registration.answers ?? []).length > 0
-                        ? registration.answers
-                            .map((answer) => `${answer.fieldLabel}: ${answer.answer}`)
-                            .join("; ")
-                        : "No custom answers"}
-                    </DataTd>
-                  )}
+                  <DataTd align="right">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setSelectedRegistration(registration)}
+                    >
+                      <Eye className="w-4 h-4" />
+                      View Answers
+                    </Button>
+                  </DataTd>
                 </DataTr>
               ))}
             </DataTableBody>
           </DataTable>
         )}
       </Section>
+
+      <Dialog open={Boolean(selectedRegistration)} onOpenChange={(open) => !open && setSelectedRegistration(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Registration Answers</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="rounded-lg border border-[var(--border)] bg-[var(--accent)]/40 p-4">
+              <div className="font-medium">{selectedRegistration?.studentName}</div>
+              <div className="text-sm text-[var(--muted-foreground)]">
+                {selectedRegistration?.studentId} &middot; {selectedRegistration?.email}
+              </div>
+              <div className="text-xs text-[var(--muted-foreground)] mt-1">
+                Registered {formatDateTime(selectedRegistration?.registeredAt)}
+              </div>
+            </div>
+
+            {(selectedRegistration?.answers ?? []).length === 0 ? (
+              <p className="text-sm text-[var(--muted-foreground)]">No custom answers were submitted.</p>
+            ) : (
+              <div className="space-y-3">
+                {selectedRegistration.answers.map((answer) => (
+                  <div key={`${answer.fieldLabel}-${answer.answer}`} className="rounded-lg border border-[var(--border)] p-4">
+                    <div className="text-xs font-semibold uppercase tracking-wider text-[var(--muted-foreground)]">
+                      {answer.fieldLabel}
+                    </div>
+                    <div className="mt-1 text-sm text-[var(--foreground)]">{answer.answer}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </PageContainer>
   );
 }

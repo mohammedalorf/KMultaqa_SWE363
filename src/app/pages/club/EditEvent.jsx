@@ -24,6 +24,7 @@ const categories = [
   { value: "social", label: "Social" },
   { value: "other", label: "Other" },
 ];
+const optionFieldTypes = new Set(["checkbox", "radio"]);
 
 function toInputDate(value) {
   if (!value) return "";
@@ -51,8 +52,8 @@ export default function EditEvent() {
   const [imageUrl, setImageUrl] = useState("");
   const [enableRegistration, setEnableRegistration] = useState(false);
   const [formFields, setFormFields] = useState([
-    { id: "1", name: "Full Name", type: "text", required: true },
-    { id: "2", name: "KFUPM Email", type: "email", required: true },
+    { id: "1", name: "Full Name", type: "text", required: true, options: [] },
+    { id: "2", name: "KFUPM Email", type: "email", required: true, options: [] },
   ]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -96,6 +97,7 @@ export default function EditEvent() {
               name: field.label,
               type: field.fieldType,
               required: Boolean(field.required),
+              options: optionFieldTypes.has(field.fieldType) ? (field.options?.length ? field.options : [""]) : [],
             }))
           );
         }
@@ -117,11 +119,64 @@ export default function EditEvent() {
   }, [id, navigate]);
 
   const addFormField = () => {
-    setFormFields([...formFields, { id: Date.now().toString(), name: "", type: "text", required: false }]);
+    setFormFields([...formFields, { id: Date.now().toString(), name: "", type: "text", required: false, options: [] }]);
   };
 
   const removeFormField = (fieldId) => {
     setFormFields(formFields.filter((field) => field.id !== fieldId));
+  };
+
+  const updateFormField = (fieldId, updates) => {
+    setFormFields(formFields.map((field) => (field.id === fieldId ? { ...field, ...updates } : field)));
+  };
+
+  const updateFieldType = (fieldId, type) => {
+    setFormFields(
+      formFields.map((field) => {
+        if (field.id !== fieldId) return field;
+
+        return {
+          ...field,
+          type,
+          options: optionFieldTypes.has(type) ? (field.options?.length ? field.options : [""]) : [],
+        };
+      })
+    );
+  };
+
+  const updateFieldOption = (fieldId, optionIndex, value) => {
+    setFormFields(
+      formFields.map((field) => {
+        if (field.id !== fieldId) return field;
+
+        const options = [...(field.options ?? [])];
+        options[optionIndex] = value;
+        return { ...field, options };
+      })
+    );
+  };
+
+  const addFieldOption = (fieldId) => {
+    setFormFields(
+      formFields.map((field) =>
+        field.id === fieldId ? { ...field, options: [...(field.options ?? []), ""] } : field
+      )
+    );
+  };
+
+  const removeFieldOption = (fieldId, optionIndex) => {
+    setFormFields(
+      formFields.map((field) => {
+        if (field.id !== fieldId) return field;
+
+        const nextOptions = (field.options ?? []).filter((_, index) => index !== optionIndex);
+        return { ...field, options: nextOptions.length ? nextOptions : [""] };
+      })
+    );
+  };
+
+  const getCleanFieldOptions = (field) => {
+    return (field.options ?? []).map((option) => option.trim()).filter(Boolean);
   };
 
   const validateRegistrationFields = () => {
@@ -130,6 +185,11 @@ export default function EditEvent() {
     for (const field of formFields) {
       if (!field.name.trim()) {
         toast.error("All registration fields must have a name.");
+        return false;
+      }
+
+      if (optionFieldTypes.has(field.type) && getCleanFieldOptions(field).length === 0) {
+        toast.error(`Add at least one option for "${field.name}".`);
         return false;
       }
     }
@@ -173,7 +233,7 @@ export default function EditEvent() {
           label: field.name,
           fieldType: field.type,
           required: field.required,
-          options: [],
+          options: optionFieldTypes.has(field.type) ? getCleanFieldOptions(field) : [],
         }))
       : [];
 
@@ -311,34 +371,68 @@ export default function EditEvent() {
                     </div>
                     <div className="space-y-3">
                       {formFields.map((field) => (
-                        <div key={field.id} className="flex items-center gap-2 p-3 bg-[var(--card)] rounded-lg">
-                          <Input
-                            placeholder="Field name"
-                            value={field.name}
-                            onChange={(e) => setFormFields(formFields.map((item) => (item.id === field.id ? { ...item, name: e.target.value } : item)))}
-                          />
-                          <select
-                            value={field.type}
-                            onChange={(e) => setFormFields(formFields.map((item) => (item.id === field.id ? { ...item, type: e.target.value } : item)))}
-                            className="px-3 py-2 border border-[var(--border)] rounded-md"
-                          >
-                            <option value="text">Text</option>
-                            <option value="email">Email</option>
-                            <option value="number">Number</option>
-                            <option value="checkbox">Checkbox</option>
-                          </select>
-                          <div className="flex items-center gap-2">
-                            <input
-                              type="checkbox"
-                              checked={field.required}
-                              onChange={(e) => setFormFields(formFields.map((item) => (item.id === field.id ? { ...item, required: e.target.checked } : item)))}
+                        <div key={field.id} className="space-y-3 p-3 bg-[var(--card)] rounded-lg border border-[var(--border)]">
+                          <div className="grid gap-2 lg:grid-cols-[1fr_160px_auto_auto] lg:items-center">
+                            <Input
+                              placeholder="Field name"
+                              value={field.name}
+                              onChange={(e) => updateFormField(field.id, { name: e.target.value })}
                             />
-                            <span className="text-sm">Required</span>
+                            <select
+                              value={field.type}
+                              onChange={(e) => updateFieldType(field.id, e.target.value)}
+                              className="h-10 px-3 py-2 border border-[var(--border)] rounded-md bg-[var(--card)] text-sm"
+                            >
+                              <option value="text">Text</option>
+                              <option value="email">Email</option>
+                              <option value="number">Number</option>
+                              <option value="checkbox">Checkboxes</option>
+                              <option value="radio">Radio Buttons</option>
+                            </select>
+                            <label className="flex items-center gap-2 text-sm text-[var(--foreground)]">
+                              <input
+                                type="checkbox"
+                                checked={field.required}
+                                onChange={(e) => updateFormField(field.id, { required: e.target.checked })}
+                              />
+                              Required
+                            </label>
+                            {formFields.length > 1 && (
+                              <Button variant="ghost" size="icon" onClick={() => removeFormField(field.id)} aria-label="Remove field">
+                                <X className="w-4 h-4" />
+                              </Button>
+                            )}
                           </div>
-                          {formFields.length > 1 && (
-                            <Button variant="ghost" size="icon" onClick={() => removeFormField(field.id)}>
-                              <X className="w-4 h-4" />
-                            </Button>
+
+                          {optionFieldTypes.has(field.type) && (
+                            <div className="space-y-2 rounded-md bg-[var(--accent)]/40 p-3">
+                              <div className="flex items-center justify-between gap-3">
+                                <Label>{field.type === "radio" ? "Radio Options" : "Checkbox Options"}</Label>
+                                <Button variant="outline" size="sm" onClick={() => addFieldOption(field.id)}>
+                                  <Plus className="w-4 h-4 mr-1" />
+                                  Add Option
+                                </Button>
+                              </div>
+                              <div className="space-y-2">
+                                {(field.options?.length ? field.options : [""]).map((option, optionIndex) => (
+                                  <div key={`${field.id}-option-${optionIndex}`} className="flex items-center gap-2">
+                                    <Input
+                                      placeholder={`Option ${optionIndex + 1}`}
+                                      value={option}
+                                      onChange={(e) => updateFieldOption(field.id, optionIndex, e.target.value)}
+                                    />
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={() => removeFieldOption(field.id, optionIndex)}
+                                      aria-label="Remove option"
+                                    >
+                                      <X className="w-4 h-4" />
+                                    </Button>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
                           )}
                         </div>
                       ))}

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
-import { Edit, FileText, Pin, PinOff, Trash2 } from "lucide-react";
+import { Edit, FileText, Heart, Pin, PinOff, Trash2 } from "lucide-react";
 import { PageContainer } from "../../components/layout/PageContainer";
 import { PageHeader } from "../../components/layout/PageHeader";
 import { Section } from "../../components/layout/Section";
@@ -136,6 +136,10 @@ export default function MyPosts() {
                             day: "numeric",
                             year: "numeric",
                           })}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Heart className="w-4 h-4" />
+                          {post.likesCount ?? 0} likes
                         </span>
                       </div>
                     </div>

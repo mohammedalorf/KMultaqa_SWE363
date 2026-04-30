@@ -8,7 +8,7 @@ import { Card } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
 import { Badge } from "../../components/ui/badge";
 import { Link } from "react-router-dom";
-import { ArrowUpRight, Calendar, Clock, FileText, MapPin, Plus, Users } from "lucide-react";
+import { ArrowUpRight, Calendar, Clock, FileText, Heart, MapPin, Plus, Users } from "lucide-react";
 import { toast } from "sonner";
 import { getApiErrorMessage } from "../../api/apiClient";
 import { getClubDashboard } from "../../api/clubApi";
@@ -171,6 +171,8 @@ export default function ClubDashboard() {
                                   minute: "2-digit",
                                 })}
                               </span>
+                              <Heart className="w-3 h-3 ml-2" />
+                              <span>{post.likesCount ?? 0}</span>
                             </div>
                           </div>
                           {post.isPinned && <Badge variant="default">Pinned</Badge>}

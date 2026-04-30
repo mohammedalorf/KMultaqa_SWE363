@@ -65,6 +65,26 @@ function getFieldInputType(fieldType) {
   return "text";
 }
 
+function getSelectedOptions(value) {
+  return Array.isArray(value) ? value : [];
+}
+
+function hasRegistrationAnswer(value) {
+  if (Array.isArray(value)) {
+    return value.length > 0;
+  }
+
+  return Boolean(String(value ?? "").trim());
+}
+
+function serializeRegistrationAnswer(value) {
+  if (Array.isArray(value)) {
+    return value.join(", ");
+  }
+
+  return String(value ?? "").trim();
+}
+
 export default function EventRegistration() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -106,7 +126,7 @@ export default function EventRegistration() {
     for (const field of registrationFields) {
       const value = formData[field.label];
 
-      if (field.required && !String(value ?? "").trim()) {
+      if (field.required && !hasRegistrationAnswer(value)) {
         nextErrors[field.label] = `${field.label} is required.`;
         continue;
       }
@@ -145,7 +165,7 @@ export default function EventRegistration() {
     const answers = registrationFields
       .map((field) => ({
         fieldLabel: field.label,
-        answer: String(formData[field.label] ?? "").trim(),
+        answer: serializeRegistrationAnswer(formData[field.label]),
       }))
       .filter((answer) => answer.answer);
 
@@ -269,6 +289,8 @@ export default function EventRegistration() {
                 const fieldId = `registration-field-${index}`;
                 const value = formData[field.label] ?? "";
                 const error = formErrors[field.label];
+                const options = field.options ?? [];
+                const selectedOptions = getSelectedOptions(value);
 
                 return (
                   <div key={field.label} className="space-y-1.5">
@@ -295,6 +317,44 @@ export default function EventRegistration() {
                           ))}
                         </SelectContent>
                       </Select>
+                    ) : field.fieldType === "radio" && options.length > 0 ? (
+                      <div className="space-y-2 rounded-md border border-[var(--border)] p-3">
+                        {options.map((option, optionIndex) => (
+                          <label key={option} className="flex items-center gap-2 text-sm">
+                            <input
+                              id={`${fieldId}-${optionIndex}`}
+                              name={fieldId}
+                              type="radio"
+                              checked={value === option}
+                              onChange={() => {
+                                setFormData({ ...formData, [field.label]: option });
+                                setFormErrors({ ...formErrors, [field.label]: undefined });
+                              }}
+                            />
+                            <span>{option}</span>
+                          </label>
+                        ))}
+                      </div>
+                    ) : field.fieldType === "checkbox" && options.length > 0 ? (
+                      <div className="space-y-2 rounded-md border border-[var(--border)] p-3">
+                        {options.map((option) => (
+                          <label key={option} className="flex items-center gap-2 text-sm">
+                            <input
+                              type="checkbox"
+                              checked={selectedOptions.includes(option)}
+                              onChange={(e) => {
+                                const nextOptions = e.target.checked
+                                  ? [...selectedOptions, option]
+                                  : selectedOptions.filter((selectedOption) => selectedOption !== option);
+
+                                setFormData({ ...formData, [field.label]: nextOptions });
+                                setFormErrors({ ...formErrors, [field.label]: undefined });
+                              }}
+                            />
+                            <span>{option}</span>
+                          </label>
+                        ))}
+                      </div>
                     ) : field.fieldType === "checkbox" ? (
                       <label className="flex items-center gap-2 text-sm">
                         <input

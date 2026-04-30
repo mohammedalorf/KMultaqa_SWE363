@@ -37,11 +37,7 @@ function EventImage({ imageUrl, title }) {
     return <img src={imageUrl} alt={title} className="w-full md:w-64 h-48 object-cover" />;
   }
 
-  return (
-    <div className="w-full md:w-64 h-48 bg-[var(--accent)] flex items-center justify-center text-[var(--muted-foreground)]">
-      <Calendar className="w-10 h-10" />
-    </div>
-  );
+  return null;
 }
 
 function formatDate(value) {

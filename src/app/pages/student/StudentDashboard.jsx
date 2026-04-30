@@ -11,10 +11,10 @@ import { Label } from "../../components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
 import { Textarea } from "../../components/ui/textarea";
 import { Link } from "react-router-dom";
-import { Rss, Search, Calendar, Clock, MapPin, Users, ArrowUpRight, Flag, Megaphone } from "lucide-react";
+import { Rss, Search, Calendar, Clock, MapPin, Users, ArrowUpRight, Flag, Megaphone, Heart } from "lucide-react";
 import { toast } from "sonner";
 import { getApiErrorMessage } from "../../api/apiClient";
-import { getStudentDashboard, submitStudentReport } from "../../api/studentApi";
+import { getStudentDashboard, likeStudentPost, submitStudentReport, unlikeStudentPost } from "../../api/studentApi";
 
 const FEED_PAGE_SIZE = 3;
 const REPORT_WINDOW_MS = 60 * 1000;
@@ -53,6 +53,7 @@ export default function StudentDashboard() {
   const [dashboardData, setDashboardData] = useState({ followedClubs: [], feed: [], announcements: [] });
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
+  const [likingPostIds, setLikingPostIds] = useState([]);
 
   const loadDashboard = async () => {
     setIsLoading(true);
@@ -141,6 +142,32 @@ export default function StudentDashboard() {
       toast.error(getApiErrorMessage(error, "Could not submit report."));
     } finally {
       setIsSubmittingReport(false);
+    }
+  };
+
+  const handleTogglePostLike = async (item) => {
+    if (item.type !== "post") return;
+
+    setLikingPostIds((current) => [...new Set([...current, item.id])]);
+
+    try {
+      const { data } = item.isLiked
+        ? await unlikeStudentPost(item.id)
+        : await likeStudentPost(item.id);
+      const updatedPost = data.post;
+
+      setDashboardData((current) => ({
+        ...current,
+        feed: current.feed.map((feedItem) =>
+          feedItem.type === "post" && feedItem.id === updatedPost.id
+            ? { ...feedItem, ...updatedPost }
+            : feedItem
+        ),
+      }));
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "Could not update post like."));
+    } finally {
+      setLikingPostIds((current) => current.filter((id) => id !== item.id));
     }
   };
 
@@ -330,7 +357,22 @@ export default function StudentDashboard() {
                     )}
                   </div>
 
-                  <div className="px-6 py-3 border-t border-[var(--border)] flex items-center justify-end">
+                  <div className="px-6 py-3 border-t border-[var(--border)] flex items-center justify-between gap-3">
+                    {item.type === "post" ? (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleTogglePostLike(item)}
+                        disabled={likingPostIds.includes(item.id)}
+                        className={item.isLiked ? "text-[var(--primary)]" : "text-[var(--muted-foreground)]"}
+                        aria-label={item.isLiked ? "Unlike post" : "Like post"}
+                      >
+                        <Heart className={`w-4 h-4 ${item.isLiked ? "fill-current" : ""}`} />
+                        <span>{item.likesCount ?? 0}</span>
+                      </Button>
+                    ) : (
+                      <span />
+                    )}
                     <button
                       className="flex items-center gap-2 text-sm text-[var(--muted-foreground)] hover:text-[var(--primary)] transition-colors"
                       onClick={() => openReportDialog(item)}

@@ -11,6 +11,7 @@ import Student from '../../../models/Student.js';
 import { createError } from '../../utils/jwt.js';
 
 export const studentRouter = Router();
+const optionFieldTypes = new Set(['checkbox', 'radio']);
 
 function objectIdTimestamp(id) {
   return id?.getTimestamp?.() ?? new Date();
@@ -77,7 +78,13 @@ function getRequestedClubSettings(input) {
   return input;
 }
 
-function serializePost(post) {
+function getPostLikes(post) {
+  return Array.isArray(post.likes) ? post.likes : [];
+}
+
+function serializePost(post, studentId) {
+  const likes = getPostLikes(post);
+
   return {
     id: String(post._id),
     type: 'post',
@@ -88,6 +95,8 @@ function serializePost(post) {
     content: post.content,
     imageUrl: post.imageUrl ?? null,
     isPinned: Boolean(post.isPinned),
+    likesCount: likes.length,
+    isLiked: studentId ? likes.some((id) => String(id) === String(studentId)) : false,
     createdAt: objectIdTimestamp(post._id).toISOString(),
   };
 }
@@ -194,6 +203,9 @@ function validateRegistrationAnswers(event, answers) {
 
   for (const field of event.registrationFields ?? []) {
     const value = answersByLabel.get(field.label);
+    const options = Array.isArray(field.options)
+      ? field.options.map((option) => String(option)).filter(Boolean)
+      : [];
 
     if (field.required && !value) {
       return `${field.label} is required`;
@@ -201,6 +213,20 @@ function validateRegistrationAnswers(event, answers) {
 
     if (field.fieldType === 'email' && value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
       return `${field.label} must be a valid email address`;
+    }
+
+    if (optionFieldTypes.has(field.fieldType) && value && options.length > 0) {
+      const selectedOptions =
+        field.fieldType === 'checkbox'
+          ? String(value)
+              .split(',')
+              .map((option) => option.trim())
+              .filter(Boolean)
+          : [String(value).trim()];
+
+      if (selectedOptions.some((option) => !options.includes(option))) {
+        return `${field.label} has an invalid option`;
+      }
     }
   }
 
@@ -243,6 +269,29 @@ async function findReportTarget(targetModel, targetId) {
   }
 
   return Club.findOne({ _id: targetId, status: 'active' }).select('_id').lean();
+}
+
+async function updatePostLike(postId, studentId, shouldLike) {
+  if (!mongoose.isValidObjectId(postId)) {
+    throw createError(404, 'Post not found');
+  }
+
+  const post = await Post.findOneAndUpdate(
+    {
+      _id: postId,
+      status: 'active',
+    },
+    shouldLike ? { $addToSet: { likes: studentId } } : { $pull: { likes: studentId } },
+    { new: true }
+  )
+    .populate('club', 'clubName logoUrl')
+    .lean();
+
+  if (!post) {
+    throw createError(404, 'Post not found');
+  }
+
+  return serializePost(post, studentId);
 }
 
 studentRouter.get('/settings', requireAuth, requireRole('student'), async (req, res, next) => {
@@ -370,7 +419,7 @@ studentRouter.get('/dashboard', requireAuth, requireRole('student'), async (req,
     );
 
     const feed = [
-      ...posts.map(serializePost),
+      ...posts.map((post) => serializePost(post, req.user._id)),
       ...events.map((event) =>
         serializeEvent(event, registrationCountByEventId.get(String(event._id)) ?? 0)
       ),
@@ -380,6 +429,32 @@ studentRouter.get('/dashboard', requireAuth, requireRole('student'), async (req,
       followedClubs: followedClubs.map(serializeClub),
       feed,
       announcements: announcements.map(serializeAnnouncement),
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+studentRouter.post('/posts/:postId/like', requireAuth, requireRole('student'), async (req, res, next) => {
+  try {
+    const post = await updatePostLike(req.params.postId, req.user._id, true);
+
+    res.status(200).json({
+      message: 'Post liked',
+      post,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+studentRouter.delete('/posts/:postId/like', requireAuth, requireRole('student'), async (req, res, next) => {
+  try {
+    const post = await updatePostLike(req.params.postId, req.user._id, false);
+
+    res.status(200).json({
+      message: 'Post unliked',
+      post,
     });
   } catch (error) {
     next(error);
@@ -698,7 +773,7 @@ studentRouter.get('/clubs/:clubId', requireAuth, requireRole('student'), async (
         socialLinks: club.socialLinks ?? {},
         isFollowing: followedClubIds.has(String(club._id)),
       },
-      posts: posts.map(serializePost),
+      posts: posts.map((post) => serializePost(post, req.user._id)),
       events: events.map((event) =>
         serializeEvent(event, registrationCountByEventId.get(String(event._id)) ?? 0)
       ),

@@ -1,4 +1,10 @@
 import axios from "axios";
+import {
+  clearAuthSession,
+  getAccessDeniedLoginUrl,
+  getRoleFromPath,
+  getStoredAuthRole,
+} from "../utils/authRedirect";
 
 export const apiClient = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || "http://localhost:5001/api",
@@ -16,6 +22,28 @@ apiClient.interceptors.request.use((config) => {
 
   return config;
 });
+
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const status = error?.response?.status;
+    const requestUrl = error?.config?.url || "";
+    const isAuthRequest = requestUrl.includes("/auth/");
+
+    if (status === 403 && !isAuthRequest && typeof window !== "undefined") {
+      const role = getRoleFromPath() || getStoredAuthRole() || "student";
+      const loginUrl = getAccessDeniedLoginUrl(role);
+
+      clearAuthSession();
+
+      if (window.location.pathname !== loginUrl.split("?")[0]) {
+        window.location.assign(loginUrl);
+      }
+    }
+
+    return Promise.reject(error);
+  }
+);
 
 export function getApiErrorMessage(error, fallback = "Something went wrong. Please try again.") {
   return error?.response?.data?.message || error?.message || fallback;

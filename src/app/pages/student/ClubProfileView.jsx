@@ -18,8 +18,10 @@ import { getApiErrorMessage } from "../../api/apiClient";
 import {
   followStudentClub,
   getStudentClubProfile,
+  likeStudentPost,
   submitStudentReport,
   unfollowStudentClub,
+  unlikeStudentPost,
 } from "../../api/studentApi";
 
 const POSTS_PER_PAGE = 2;
@@ -75,6 +77,7 @@ export default function ClubProfileView() {
   const [reportComment, setReportComment] = useState("");
   const [isReporting, setIsReporting] = useState(false);
   const [postPage, setPostPage] = useState(1);
+  const [likingPostIds, setLikingPostIds] = useState([]);
 
   const loadClub = async () => {
     setIsLoading(true);
@@ -155,6 +158,27 @@ export default function ClubProfileView() {
       toast.error(getApiErrorMessage(error, "Could not submit report."));
     } finally {
       setIsReporting(false);
+    }
+  };
+
+  const handleTogglePostLike = async (post) => {
+    setLikingPostIds((current) => [...new Set([...current, post.id])]);
+
+    try {
+      const { data } = post.isLiked
+        ? await unlikeStudentPost(post.id)
+        : await likeStudentPost(post.id);
+      const updatedPost = data.post;
+
+      setPosts((current) =>
+        current.map((item) =>
+          item.id === updatedPost.id ? { ...item, ...updatedPost } : item
+        )
+      );
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "Could not update post like."));
+    } finally {
+      setLikingPostIds((current) => current.filter((postId) => postId !== post.id));
     }
   };
 
@@ -270,7 +294,20 @@ export default function ClubProfileView() {
                     </div>
                     <h3 className="text-xl font-semibold mb-2">{post.title}</h3>
                     <p className="text-[var(--muted-foreground)] mb-3">{post.content}</p>
-                    <div className="text-sm text-[var(--muted-foreground)]">{formatDate(post.createdAt)}</div>
+                    <div className="flex items-center justify-between gap-3 text-sm text-[var(--muted-foreground)]">
+                      <span>{formatDate(post.createdAt)}</span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleTogglePostLike(post)}
+                        disabled={likingPostIds.includes(post.id)}
+                        className={post.isLiked ? "text-[var(--primary)]" : "text-[var(--muted-foreground)]"}
+                        aria-label={post.isLiked ? "Unlike post" : "Like post"}
+                      >
+                        <Heart className={`w-4 h-4 ${post.isLiked ? "fill-current" : ""}`} />
+                        <span>{post.likesCount ?? 0}</span>
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </Card>

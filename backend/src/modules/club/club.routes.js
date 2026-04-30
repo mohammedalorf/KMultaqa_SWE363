@@ -19,6 +19,7 @@ const eventCategories = new Set([
   'social',
   'other',
 ]);
+const optionFieldTypes = new Set(['checkbox', 'radio']);
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const studentIdPattern = /^s\d{9}$/i;
@@ -55,6 +56,10 @@ function serializeDashboardPost(post) {
   return serializePost(post);
 }
 
+function getPostLikes(post) {
+  return Array.isArray(post.likes) ? post.likes : [];
+}
+
 function serializePost(post) {
   return {
     id: String(post._id),
@@ -62,6 +67,7 @@ function serializePost(post) {
     content: post.content,
     imageUrl: post.imageUrl ?? null,
     isPinned: Boolean(post.isPinned),
+    likesCount: getPostLikes(post).length,
     status: post.status,
     createdAt: objectIdTimestamp(post._id).toISOString(),
   };
@@ -138,7 +144,7 @@ function normalizeRegistrationFields(fields) {
     return [];
   }
 
-  return fields
+  const normalizedFields = fields
     .map((field) => ({
       label: typeof field.label === 'string' ? field.label.trim() : '',
       fieldType: field.fieldType,
@@ -148,6 +154,14 @@ function normalizeRegistrationFields(fields) {
         : [],
     }))
     .filter((field) => field.label);
+
+  for (const field of normalizedFields) {
+    if (optionFieldTypes.has(field.fieldType) && field.options.length === 0) {
+      throw createError(400, `${field.label} must include at least one option`);
+    }
+  }
+
+  return normalizedFields;
 }
 
 function normalizeCapacity(value) {

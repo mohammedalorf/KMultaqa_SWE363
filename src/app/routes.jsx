@@ -37,6 +37,12 @@ import Followers from "./pages/club/Followers";
 import { StudentOutletLayout } from "./components/layout/StudentOutletLayout";
 import { ClubOutletLayout } from "./components/layout/ClubOutletLayout";
 import { AdminOutletLayout } from "./components/layout/AdminOutletLayout";
+import {
+  ACCESS_DENIED_MESSAGE,
+  clearAuthSession,
+  getAccessDeniedLoginUrl,
+  getLoginPathForRole,
+} from "./utils/authRedirect";
 
 function RoleGuard({ role, children }) {
   if (typeof window === "undefined") {
@@ -53,8 +59,20 @@ function RoleGuard({ role, children }) {
     storedUser = null;
   }
 
-  if (!token || currentRole !== role || storedUser?.role !== role) {
-    return <Navigate to={`/${role}/login`} replace />;
+  if (!token) {
+    return <Navigate to={getLoginPathForRole(role)} replace />;
+  }
+
+  if (currentRole !== role || storedUser?.role !== role) {
+    clearAuthSession();
+
+    return (
+      <Navigate
+        to={getAccessDeniedLoginUrl(role)}
+        replace
+        state={{ message: ACCESS_DENIED_MESSAGE }}
+      />
+    );
   }
 
   return children;

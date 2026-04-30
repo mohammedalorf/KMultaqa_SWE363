@@ -1,9 +1,10 @@
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Check } from "lucide-react";
+import { getLoginNotice } from "../utils/authRedirect";
 
 const ROLE_CONTENT = {
   student: {
@@ -51,9 +52,11 @@ export default function LoginForm({
   role = "student",
 }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const loginNotice = getLoginNotice(location);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -138,6 +141,12 @@ export default function LoginForm({
             <h1 className="text-2xl font-bold text-[var(--foreground)] tracking-tight mb-1.5">{title}</h1>
             <p className="text-sm text-[var(--muted-foreground)]">{subtitle}</p>
           </div>
+
+          {loginNotice && (
+            <div className="mb-4 rounded-lg border border-[var(--destructive)]/25 bg-[var(--destructive)]/10 px-4 py-3 text-sm text-[var(--destructive)]" role="alert">
+              {loginNotice}
+            </div>
+          )}
 
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-1.5">
