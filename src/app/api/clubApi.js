@@ -56,6 +56,12 @@ export function getClubEventRegistrations(eventId) {
   return apiClient.get(`/club/events/${eventId}/registrations`);
 }
 
+export function updateClubEventRegistrationStatus(eventId, registrationId, status) {
+  return apiClient.patch(`/club/events/${eventId}/registrations/${registrationId}`, {
+    status,
+  });
+}
+
 export function getClubFollowers() {
   return apiClient.get("/club/followers");
 }

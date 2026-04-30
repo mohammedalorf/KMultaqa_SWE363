@@ -32,8 +32,11 @@ const eventRegistrationSchema = new Schema({
   answers: [answerSchema],
   status: {
     type: String,
-    enum: ['registered', 'cancelled'],
+    enum: ['pending', 'registered', 'declined', 'cancelled'],
     default: 'registered',
+  },
+  reviewedAt: {
+    type: Date,
   },
   cancelledAt: {
     type: Date,

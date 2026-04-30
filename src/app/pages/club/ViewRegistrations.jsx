@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { toast } from "sonner";
-import { Calendar, Download, Eye, Search, Users } from "lucide-react";
+import { Calendar, CheckCircle2, Download, Eye, Search, Users, XCircle } from "lucide-react";
 import { PageContainer } from "../../components/layout/PageContainer";
 import { PageHeader } from "../../components/layout/PageHeader";
 import { Section } from "../../components/layout/Section";
@@ -10,11 +10,12 @@ import { Toolbar } from "../../components/layout/Toolbar";
 import { EmptyState } from "../../components/layout/EmptyState";
 import { DataTable, DataTableHead, DataTableBody, DataTh, DataTr, DataTd } from "../../components/layout/DataTable";
 import { Button } from "../../components/ui/button";
+import { Badge } from "../../components/ui/badge";
 import { Card } from "../../components/ui/card";
 import { Input } from "../../components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../../components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "../../components/ui/dialog";
 import { getApiErrorMessage } from "../../api/apiClient";
-import { getClubEventRegistrations } from "../../api/clubApi";
+import { getClubEventRegistrations, updateClubEventRegistrationStatus } from "../../api/clubApi";
 
 function formatDate(value) {
   if (!value) return "Date TBA";
@@ -51,6 +52,7 @@ export default function ViewRegistrations() {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [selectedRegistration, setSelectedRegistration] = useState(null);
+  const [busyRegistrationId, setBusyRegistrationId] = useState("");
 
   const loadRegistrations = async () => {
     setIsLoading(true);
@@ -90,11 +92,12 @@ export default function ViewRegistrations() {
 
   const handleExport = () => {
     const rows = [
-      ["Student Name", "Student ID", "Email", "Registered At", "Answers"],
+      ["Student Name", "Student ID", "Email", "Status", "Registered At", "Answers"],
       ...registrations.map((registration) => [
         registration.studentName,
         registration.studentId,
         registration.email,
+        registration.status,
         formatDateTime(registration.registeredAt),
         (registration.answers ?? [])
           .map((answer) => `${answer.fieldLabel}: ${answer.answer}`)
@@ -111,6 +114,32 @@ export default function ViewRegistrations() {
     link.click();
     URL.revokeObjectURL(url);
     toast.success("Registration data exported.");
+  };
+
+  const getStatusBadge = (status) => {
+    if (status === "pending") return <Badge variant="outline">Pending</Badge>;
+    if (status === "registered") return <Badge variant="success">Approved</Badge>;
+    if (status === "declined") return <Badge variant="destructive">Declined</Badge>;
+    return <Badge variant="secondary">{status}</Badge>;
+  };
+
+  const handleDecision = async (registration, status) => {
+    setBusyRegistrationId(registration.id);
+
+    try {
+      const { data } = await updateClubEventRegistrationStatus(id, registration.id, status);
+      setRegistrations((current) =>
+        current.map((item) => (item.id === registration.id ? data.registration : item))
+      );
+      setSelectedRegistration((current) =>
+        current?.id === registration.id ? data.registration : current
+      );
+      toast.success(data.message || "Registration updated.");
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "Could not update registration."));
+    } finally {
+      setBusyRegistrationId("");
+    }
   };
 
   return (
@@ -182,6 +211,7 @@ export default function ViewRegistrations() {
               <DataTh>Student</DataTh>
               <DataTh>Student ID</DataTh>
               <DataTh>Email</DataTh>
+              <DataTh>Status</DataTh>
               <DataTh>Registered At</DataTh>
               <DataTh align="right">Actions</DataTh>
             </DataTableHead>
@@ -191,6 +221,7 @@ export default function ViewRegistrations() {
                   <DataTd className="font-medium">{registration.studentName}</DataTd>
                   <DataTd className="text-[var(--muted-foreground)]">{registration.studentId}</DataTd>
                   <DataTd className="text-[var(--muted-foreground)]">{registration.email}</DataTd>
+                  <DataTd>{getStatusBadge(registration.status)}</DataTd>
                   <DataTd className="text-[var(--muted-foreground)]">
                     {formatDateTime(registration.registeredAt)}
                   </DataTd>
@@ -222,6 +253,7 @@ export default function ViewRegistrations() {
               <div className="text-sm text-[var(--muted-foreground)]">
                 {selectedRegistration?.studentId} &middot; {selectedRegistration?.email}
               </div>
+              <div className="mt-2">{selectedRegistration && getStatusBadge(selectedRegistration.status)}</div>
               <div className="text-xs text-[var(--muted-foreground)] mt-1">
                 Registered {formatDateTime(selectedRegistration?.registeredAt)}
               </div>
@@ -240,6 +272,27 @@ export default function ViewRegistrations() {
                   </div>
                 ))}
               </div>
+            )}
+
+            {selectedRegistration?.status === "pending" && (
+              <DialogFooter className="border-t border-[var(--border)] pt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => handleDecision(selectedRegistration, "registered")}
+                  disabled={busyRegistrationId === selectedRegistration.id}
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  Approve
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={() => handleDecision(selectedRegistration, "declined")}
+                  disabled={busyRegistrationId === selectedRegistration.id}
+                >
+                  <XCircle className="w-4 h-4" />
+                  Decline
+                </Button>
+              </DialogFooter>
             )}
           </div>
         </DialogContent>

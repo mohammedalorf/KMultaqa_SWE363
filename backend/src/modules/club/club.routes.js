@@ -7,6 +7,7 @@ import EventRegistration from '../../../models/EventRegistration.js';
 import Post from '../../../models/Post.js';
 import { requireAuth, requireRole } from '../../middlewares/auth.middleware.js';
 import { createError } from '../../utils/jwt.js';
+import { notifyStudentAboutRegistrationDecision } from '../../utils/notifications.js';
 
 export const clubRouter = Router();
 
@@ -98,9 +99,26 @@ function serializeEvent(event, registeredCount = 0) {
     capacity: event.capacity ?? null,
     imageUrl: event.imageUrl ?? null,
     registrationFields: (event.registrationFields ?? []).map(serializeRegistrationField),
+    requiresRegistrationApproval: Boolean(event.requiresRegistrationApproval),
     status: event.status,
     registered: registeredCount,
     createdAt: objectIdTimestamp(event._id).toISOString(),
+  };
+}
+
+function serializeEventRegistration(registration) {
+  return {
+    id: String(registration._id),
+    studentName: registration.student.fullName,
+    studentId: registration.student.studentId,
+    email: registration.student.email,
+    status: registration.status,
+    registeredAt: objectIdTimestamp(registration._id).toISOString(),
+    reviewedAt: registration.reviewedAt ?? null,
+    answers: (registration.answers ?? []).map((answer) => ({
+      fieldLabel: answer.fieldLabel,
+      answer: answer.answer,
+    })),
   };
 }
 
@@ -633,6 +651,7 @@ clubRouter.post('/events', requireAuth, requireRole('club'), async (req, res, ne
       capacity: normalizeCapacity(req.body?.capacity),
       imageUrl: optionalString(req.body?.imageUrl),
       registrationFields: normalizeRegistrationFields(req.body?.registrationFields),
+      requiresRegistrationApproval: Boolean(req.body?.requiresRegistrationApproval),
       status: 'published',
     });
 
@@ -717,6 +736,10 @@ clubRouter.patch('/events/:eventId', requireAuth, requireRole('club'), async (re
       event.registrationFields = normalizeRegistrationFields(req.body.registrationFields);
     }
 
+    if (req.body?.requiresRegistrationApproval !== undefined) {
+      event.requiresRegistrationApproval = Boolean(req.body.requiresRegistrationApproval);
+    }
+
     const updatedEvent = await event.save();
     const registered = await EventRegistration.countDocuments({
       event: updatedEvent._id,
@@ -753,27 +776,77 @@ clubRouter.get('/events/:eventId/registrations', requireAuth, requireRole('club'
     const event = await findOwnedEvent(req.user._id, req.params.eventId);
     const registrations = await EventRegistration.find({
       event: event._id,
-      status: 'registered',
+      status: { $ne: 'cancelled' },
     })
       .populate('student', 'fullName studentId email')
       .sort({ _id: -1 })
       .lean();
+    const registeredCount = registrations.filter((registration) => registration.status === 'registered').length;
 
     res.status(200).json({
-      event: serializeEvent(event, registrations.length),
+      event: serializeEvent(event, registeredCount),
       registrations: registrations
         .filter((registration) => registration.student)
-        .map((registration) => ({
-          id: String(registration._id),
-          studentName: registration.student.fullName,
-          studentId: registration.student.studentId,
-          email: registration.student.email,
-          registeredAt: objectIdTimestamp(registration._id).toISOString(),
-          answers: (registration.answers ?? []).map((answer) => ({
-            fieldLabel: answer.fieldLabel,
-            answer: answer.answer,
-          })),
-        })),
+        .map(serializeEventRegistration),
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+clubRouter.patch('/events/:eventId/registrations/:registrationId', requireAuth, requireRole('club'), async (req, res, next) => {
+  try {
+    requireActiveClub(req);
+
+    const event = await findOwnedEvent(req.user._id, req.params.eventId);
+
+    if (!mongoose.isValidObjectId(req.params.registrationId)) {
+      throw createError(404, 'Registration not found');
+    }
+
+    const status = typeof req.body?.status === 'string' ? req.body.status.trim() : '';
+
+    if (!['registered', 'declined'].includes(status)) {
+      throw createError(400, 'Registration status is invalid');
+    }
+
+    const registration = await EventRegistration.findOne({
+      _id: req.params.registrationId,
+      event: event._id,
+      status: { $in: ['pending', 'declined', 'registered'] },
+    }).populate('student', 'fullName studentId email');
+
+    if (!registration || !registration.student) {
+      throw createError(404, 'Registration not found');
+    }
+
+    if (status === 'registered' && registration.status !== 'registered') {
+      const registeredCount = await EventRegistration.countDocuments({
+        event: event._id,
+        status: 'registered',
+      });
+
+      if (event.capacity && registeredCount >= event.capacity) {
+        throw createError(409, 'This event is full');
+      }
+    }
+
+    registration.status = status;
+    registration.reviewedAt = new Date();
+    registration.cancelledAt = undefined;
+    await registration.save();
+
+    await notifyStudentAboutRegistrationDecision({
+      studentId: registration.student._id,
+      clubId: req.user._id,
+      eventId: event._id,
+      eventTitle: event.title,
+      status,
+    });
+
+    res.status(200).json({
+      message: status === 'registered' ? 'Registration approved' : 'Registration declined',
+      registration: serializeEventRegistration(registration),
     });
   } catch (error) {
     next(error);

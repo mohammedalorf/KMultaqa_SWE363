@@ -67,3 +67,41 @@ export async function notifyFollowersAboutClubContent({ clubId, targetId, target
     throw error;
   }
 }
+
+export async function notifyStudentAboutRegistrationDecision({ studentId, clubId, eventId, eventTitle, status }) {
+  if (!studentId || !clubId || !eventId || !eventTitle || !status) {
+    return { notified: false };
+  }
+
+  const club = await Club.findById(clubId).select('clubName').lean();
+
+  if (!club) {
+    return { notified: false };
+  }
+
+  const decisionText = status === 'registered' ? 'approved' : 'declined';
+  const message = `${club.clubName} ${decisionText} your registration request for ${eventTitle}.`;
+
+  await Notification.findOneAndUpdate(
+    {
+      student: studentId,
+      target: eventId,
+      targetModel: 'Event',
+    },
+    {
+      $set: {
+        student: studentId,
+        club: clubId,
+        target: eventId,
+        targetModel: 'Event',
+        type: 'registration',
+        message,
+        isRead: false,
+        createdAt: new Date(),
+      },
+    },
+    { upsert: true, new: true }
+  );
+
+  return { notified: true };
+}

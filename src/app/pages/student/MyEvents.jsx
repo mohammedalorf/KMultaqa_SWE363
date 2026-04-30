@@ -125,6 +125,10 @@ export default function MyEvents() {
     switch (status) {
       case "upcoming":
         return <Badge variant="default">Upcoming</Badge>;
+      case "pending":
+        return <Badge variant="warning">Pending Review</Badge>;
+      case "declined":
+        return <Badge variant="destructive">Declined</Badge>;
       case "past":
         return <Badge variant="secondary">Past</Badge>;
       case "cancelled":
@@ -149,6 +153,12 @@ export default function MyEvents() {
           </Button>
           <Button variant={filter === "upcoming" ? "default" : "outline"} onClick={() => setFilter("upcoming")}>
             Upcoming
+          </Button>
+          <Button variant={filter === "pending" ? "default" : "outline"} onClick={() => setFilter("pending")}>
+            Pending
+          </Button>
+          <Button variant={filter === "declined" ? "default" : "outline"} onClick={() => setFilter("declined")}>
+            Declined
           </Button>
           <Button variant={filter === "past" ? "default" : "outline"} onClick={() => setFilter("past")}>
             Past
@@ -238,7 +248,7 @@ export default function MyEvents() {
                           View Details
                         </Button>
                       </Link>
-                      {event.status === "upcoming" && (
+                      {["upcoming", "pending"].includes(event.status) && (
                         <Button
                           variant="ghost"
                           size="sm"

@@ -40,6 +40,7 @@ export default function CreateEvent() {
   const [capacity, setCapacity] = useState("");
   const [imageUrl, setImageUrl] = useState("");
   const [enableRegistration, setEnableRegistration] = useState(false);
+  const [requiresRegistrationApproval, setRequiresRegistrationApproval] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const [formFields, setFormFields] = useState([
     { id: "1", name: "Full Name", type: "text", required: true, options: [] },
@@ -178,6 +179,7 @@ export default function CreateEvent() {
         capacity,
         imageUrl,
         registrationFields,
+        requiresRegistrationApproval,
       });
 
       toast.success("Event published. Followers will see a notification.");
@@ -278,6 +280,14 @@ export default function CreateEvent() {
             </div>
 
             <div className="border-t border-[var(--border)] pt-6">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <Label htmlFor="approvalRequired">Require Registration Approval</Label>
+                  <p className="text-sm text-[var(--muted-foreground)]">Review each student's answers before confirming their seat.</p>
+                </div>
+                <Switch id="approvalRequired" checked={requiresRegistrationApproval} onCheckedChange={setRequiresRegistrationApproval} />
+              </div>
+
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <Label htmlFor="enableReg">Enable Registration Form</Label>

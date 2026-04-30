@@ -122,6 +122,9 @@ export default function MyEvents() {
                       <div className="flex items-center gap-2 mb-2 flex-wrap">
                         <h3 className="text-xl font-semibold">{event.title}</h3>
                         <Badge variant="default">Published</Badge>
+                        {event.requiresRegistrationApproval && (
+                          <Badge variant="warning">Approval Required</Badge>
+                        )}
                       </div>
                       <p className="text-[var(--muted-foreground)] mb-3">{event.description}</p>
                       <div className="grid sm:grid-cols-2 gap-3 text-sm mb-3">

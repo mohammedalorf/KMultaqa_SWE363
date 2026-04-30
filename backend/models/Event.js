@@ -85,6 +85,10 @@ const eventSchema = new Schema({
     type: String,
   },
   registrationFields: [registrationFieldSchema],
+  requiresRegistrationApproval: {
+    type: Boolean,
+    default: false,
+  },
   status: {
     type: String,
     enum: ['draft', 'published', 'cancelled'],

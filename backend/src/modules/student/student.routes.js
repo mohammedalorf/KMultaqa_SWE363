@@ -117,6 +117,7 @@ function serializeEvent(event, registeredCount) {
     capacity: event.capacity ?? null,
     registered: registeredCount,
     imageUrl: event.imageUrl ?? null,
+    requiresRegistrationApproval: Boolean(event.requiresRegistrationApproval),
     createdAt: objectIdTimestamp(event._id).toISOString(),
   };
 }
@@ -140,12 +141,13 @@ function serializeRegistrationField(field) {
   };
 }
 
-function serializeEventDetail(event, registeredCount, isRegistered) {
+function serializeEventDetail(event, registeredCount, registrationStatus) {
   return {
     ...serializeEvent(event, registeredCount),
     description: event.description,
     registrationFields: (event.registrationFields ?? []).map(serializeRegistrationField),
-    isRegistered,
+    isRegistered: ['registered', 'pending'].includes(registrationStatus),
+    registrationStatus: registrationStatus ?? null,
     club: {
       id: String(event.club?._id ?? event.club),
       clubName: event.club?.clubName ?? 'Club',
@@ -157,6 +159,14 @@ function serializeEventDetail(event, registeredCount, isRegistered) {
 function getRegistrationStatus(event, registrationStatus) {
   if (registrationStatus === 'cancelled' || event.status === 'cancelled') {
     return 'cancelled';
+  }
+
+  if (registrationStatus === 'pending') {
+    return 'pending';
+  }
+
+  if (registrationStatus === 'declined') {
+    return 'declined';
   }
 
   if (event.endDateTime && new Date(event.endDateTime).getTime() < Date.now()) {
@@ -181,6 +191,7 @@ function serializeRegisteredEvent(registration) {
     location: event.location ?? '',
     capacity: event.capacity ?? null,
     status: getRegistrationStatus(event, registration.status),
+    registrationStatus: registration.status,
     imageUrl: event.imageUrl ?? null,
   };
 }
@@ -501,7 +512,7 @@ studentRouter.get('/events/registrations', requireAuth, requireRole('student'), 
   try {
     const registrations = await EventRegistration.find({
       student: req.user._id,
-      status: 'registered',
+      status: { $in: ['pending', 'registered', 'declined'] },
     })
       .populate({
         path: 'event',
@@ -551,12 +562,12 @@ studentRouter.get('/events/:eventId', requireAuth, requireRole('student'), async
       EventRegistration.findOne({
         event: event._id,
         student: req.user._id,
-        status: 'registered',
+        status: { $ne: 'cancelled' },
       }).lean(),
     ]);
 
     res.status(200).json({
-      event: serializeEventDetail(event, registeredCount, Boolean(registration)),
+      event: serializeEventDetail(event, registeredCount, registration?.status ?? null),
     });
   } catch (error) {
     next(error);
@@ -595,6 +606,11 @@ studentRouter.post('/events/:eventId/register', requireAuth, requireRole('studen
       return;
     }
 
+    if (existingRegistration?.status === 'pending') {
+      res.status(409).json({ message: 'Your registration request is pending review' });
+      return;
+    }
+
     const registeredCount = await EventRegistration.countDocuments({
       event: event._id,
       status: 'registered',
@@ -613,9 +629,12 @@ studentRouter.post('/events/:eventId/register', requireAuth, requireRole('studen
       return;
     }
 
+    const registrationStatus = event.requiresRegistrationApproval ? 'pending' : 'registered';
+
     if (existingRegistration) {
       existingRegistration.answers = answers;
-      existingRegistration.status = 'registered';
+      existingRegistration.status = registrationStatus;
+      existingRegistration.reviewedAt = undefined;
       existingRegistration.cancelledAt = undefined;
       await existingRegistration.save();
     } else {
@@ -623,10 +642,16 @@ studentRouter.post('/events/:eventId/register', requireAuth, requireRole('studen
         event: event._id,
         student: req.user._id,
         answers,
+        status: registrationStatus,
       });
     }
 
-    res.status(201).json({ message: 'Registration successful' });
+    res.status(201).json({
+      message: event.requiresRegistrationApproval
+        ? 'Registration request submitted for club review'
+        : 'Registration successful',
+      status: registrationStatus,
+    });
   } catch (error) {
     if (error?.code === 11000) {
       next(Object.assign(new Error('You are already registered for this event'), { statusCode: 409 }));
@@ -648,7 +673,7 @@ studentRouter.delete('/events/:eventId/registration', requireAuth, requireRole('
       {
         event: req.params.eventId,
         student: req.user._id,
-        status: 'registered',
+        status: { $in: ['pending', 'registered'] },
       },
       {
         status: 'cancelled',

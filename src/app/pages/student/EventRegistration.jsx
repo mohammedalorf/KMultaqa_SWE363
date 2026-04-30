@@ -95,6 +95,7 @@ export default function EventRegistration() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loadError, setLoadError] = useState("");
   const [showConfirmation, setShowConfirmation] = useState(false);
+  const [registrationResultStatus, setRegistrationResultStatus] = useState("");
 
   const loadEvent = async () => {
     setIsLoading(true);
@@ -173,6 +174,7 @@ export default function EventRegistration() {
 
     try {
       const { data } = await registerForStudentEvent(event.id, answers);
+      setRegistrationResultStatus(data.status ?? "registered");
       toast.success(data.message || "Registration successful!");
       setShowConfirmation(true);
 
@@ -209,6 +211,8 @@ export default function EventRegistration() {
   }
 
   if (showConfirmation) {
+    const isPending = registrationResultStatus === "pending";
+
     return (
       <PageContainer size="narrow">
         <div className="flex items-center justify-center min-h-[60vh]">
@@ -216,8 +220,14 @@ export default function EventRegistration() {
             <div className="w-16 h-16 bg-[var(--success-soft)] text-[var(--success)] rounded-full flex items-center justify-center mx-auto mb-4">
               <CheckCircle2 className="w-8 h-8" />
             </div>
-            <h2 className="text-2xl font-bold mb-2">Registration Confirmed!</h2>
-            <p className="text-[var(--muted-foreground)] mb-6">You're successfully registered for {event.title}</p>
+            <h2 className="text-2xl font-bold mb-2">
+              {isPending ? "Request Submitted!" : "Registration Confirmed!"}
+            </h2>
+            <p className="text-[var(--muted-foreground)] mb-6">
+              {isPending
+                ? `Your registration request for ${event.title} is waiting for club approval.`
+                : `You're successfully registered for ${event.title}`}
+            </p>
             <Button onClick={() => navigate("/student/my-events")} className="w-full">View My Events</Button>
           </Card>
         </div>
@@ -271,7 +281,13 @@ export default function EventRegistration() {
 
       <Section title="Registration Form">
         <Card className="p-6">
-          {event.isRegistered ? (
+          {event.registrationStatus === "pending" ? (
+            <EmptyState
+              title="Request pending"
+              description="The club representative is reviewing your registration request."
+              action={<Button onClick={() => navigate("/student/my-events")}>View My Events</Button>}
+            />
+          ) : event.registrationStatus === "registered" ? (
             <EmptyState
               title="Already registered"
               description="You are already registered for this event."
@@ -279,6 +295,12 @@ export default function EventRegistration() {
             />
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
+              {event.registrationStatus === "declined" && (
+                <div className="rounded-lg border border-[var(--destructive)]/20 bg-[var(--destructive)]/10 p-4 text-sm text-[var(--destructive)]">
+                  Your previous registration request was declined. You can submit a new request with updated answers.
+                </div>
+              )}
+
               {registrationFields.length === 0 && (
                 <p className="text-sm text-[var(--muted-foreground)]">
                   This event does not require extra registration details.
@@ -388,7 +410,9 @@ export default function EventRegistration() {
 
               <div className="pt-4">
                 <Button type="submit" className="w-full" size="lg" disabled={registrationClosed || isSubmitting}>
-                  {isSubmitting ? "Registering..." : "Complete Registration"}
+                  {isSubmitting
+                    ? event.requiresRegistrationApproval ? "Submitting..." : "Registering..."
+                    : event.requiresRegistrationApproval ? "Submit Registration Request" : "Complete Registration"}
                 </Button>
               </div>
             </form>

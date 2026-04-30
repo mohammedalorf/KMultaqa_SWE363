@@ -12,7 +12,7 @@ function serializeNotification(notification) {
     targetId: String(notification.target),
     targetModel: notification.targetModel,
     isRead: Boolean(notification.isRead),
-    createdAt: notification.createdAt,
+    createdAt: notification.updatedAt ?? notification.createdAt,
   };
 }
 
@@ -20,7 +20,7 @@ notificationRouter.get('/', requireAuth, requireRole('student'), async (req, res
   try {
     const [notifications, unreadCount] = await Promise.all([
       Notification.find({ student: req.user._id })
-        .sort({ createdAt: -1 })
+        .sort({ updatedAt: -1 })
         .limit(20)
         .lean(),
       Notification.countDocuments({ student: req.user._id, isRead: false }),

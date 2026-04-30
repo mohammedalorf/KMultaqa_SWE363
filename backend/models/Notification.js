@@ -28,7 +28,7 @@ const notificationSchema = new Schema(
     type: {
       type: String,
       required: true,
-      enum: ['post', 'event'],
+      enum: ['post', 'event', 'registration'],
     },
     message: {
       type: String,
