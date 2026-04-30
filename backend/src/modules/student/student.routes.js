@@ -12,6 +12,11 @@ import { createError } from '../../utils/jwt.js';
 
 export const studentRouter = Router();
 const optionFieldTypes = new Set(['checkbox', 'radio']);
+const defaultAccentColor = '#1e3a5f';
+const defaultBackgroundColor = '#f8fafc';
+const defaultCardColor = '#ffffff';
+const defaultPrimaryTextColor = '#111827';
+const defaultSecondaryTextColor = '#6b7280';
 
 function objectIdTimestamp(id) {
   return id?.getTimestamp?.() ?? new Date();
@@ -23,6 +28,12 @@ function serializeClub(club) {
     clubName: club.clubName,
     description: club.description,
     logoUrl: club.logoUrl ?? null,
+    accentColor: club.accentColor ?? club.themeColor ?? defaultAccentColor,
+    backgroundColor: club.backgroundColor ?? defaultBackgroundColor,
+    cardColor: club.cardColor ?? defaultCardColor,
+    primaryTextColor: club.primaryTextColor ?? defaultPrimaryTextColor,
+    secondaryTextColor: club.secondaryTextColor ?? defaultSecondaryTextColor,
+    logoShape: club.logoShape ?? 'circle',
     category: club.category,
     status: club.status,
     followers: Array.isArray(club.followers) ? club.followers.length : 0,
@@ -41,6 +52,7 @@ function getClubPreference(student, clubId) {
   return {
     email: preference?.email !== false,
     inApp: preference?.inApp !== false,
+    notificationsEnabled: preference?.notificationsEnabled !== false && preference?.inApp !== false,
   };
 }
 
@@ -65,6 +77,7 @@ function serializeStudentSettings(student) {
         category: club.category,
         email: preferences.email,
         inApp: preferences.inApp,
+        notificationsEnabled: preferences.notificationsEnabled,
       };
     }),
   };
@@ -337,6 +350,10 @@ studentRouter.patch('/settings', requireAuth, requireRole('student'), async (req
           club: clubId,
           email: typeof requested.email === 'boolean' ? requested.email : existing.email,
           inApp: typeof requested.inApp === 'boolean' ? requested.inApp : existing.inApp,
+          notificationsEnabled:
+            typeof requested.notificationsEnabled === 'boolean'
+              ? requested.notificationsEnabled
+              : existing.notificationsEnabled,
         };
       }),
     };
@@ -709,7 +726,7 @@ studentRouter.get('/clubs', requireAuth, requireRole('student'), async (req, res
 
     const [clubs, student] = await Promise.all([
       Club.find(filters)
-        .select('clubName description logoUrl category status followers')
+        .select('clubName description logoUrl accentColor backgroundColor cardColor primaryTextColor secondaryTextColor logoShape category status followers')
         .sort({ clubName: 1 })
         .limit(100)
         .lean(),
@@ -740,9 +757,10 @@ studentRouter.get('/clubs/:clubId', requireAuth, requireRole('student'), async (
         _id: req.params.clubId,
         status: 'active',
       })
-        .select('clubName description email logoUrl bannerUrl socialLinks category status followers')
+        .select('clubName description email logoUrl bannerUrl accentColor backgroundColor cardColor primaryTextColor secondaryTextColor logoShape socialLinks category status followers')
+        .populate('followers', 'fullName studentId')
         .lean(),
-      Student.findById(req.user._id).select('followedClubs').lean(),
+      Student.findById(req.user._id).select('followedClubs notificationPreferences').lean(),
     ]);
 
     if (!club) {
@@ -789,6 +807,7 @@ studentRouter.get('/clubs/:clubId', requireAuth, requireRole('student'), async (
       registrationCounts.map((item) => [String(item._id), item.count])
     );
     const followedClubIds = new Set((student?.followedClubs ?? []).map((id) => String(id)));
+    const notificationPreference = getClubPreference(student, club._id);
 
     res.status(200).json({
       club: {
@@ -796,7 +815,13 @@ studentRouter.get('/clubs/:clubId', requireAuth, requireRole('student'), async (
         email: club.email,
         bannerUrl: club.bannerUrl ?? null,
         socialLinks: club.socialLinks ?? {},
+        followersList: (club.followers ?? []).map((follower) => ({
+          id: String(follower._id),
+          fullName: follower.fullName,
+          studentId: follower.studentId,
+        })),
         isFollowing: followedClubIds.has(String(club._id)),
+        notificationsEnabled: notificationPreference.notificationsEnabled,
       },
       posts: posts.map((post) => serializePost(post, req.user._id)),
       events: events.map((event) =>
@@ -818,11 +843,74 @@ studentRouter.post('/clubs/:clubId/follow', requireAuth, requireRole('student'),
     }
 
     await Promise.all([
-      Student.findByIdAndUpdate(req.user._id, { $addToSet: { followedClubs: club._id } }),
+      Student.findByIdAndUpdate(req.user._id, {
+        $addToSet: { followedClubs: club._id },
+        $pull: { 'notificationPreferences.clubs': { club: club._id } },
+      }),
       Club.findByIdAndUpdate(club._id, { $addToSet: { followers: req.user._id } }),
     ]);
 
-    res.status(200).json({ message: 'Following club' });
+    await Student.findByIdAndUpdate(req.user._id, {
+      $addToSet: {
+        'notificationPreferences.clubs': {
+          club: club._id,
+          email: true,
+          inApp: true,
+          notificationsEnabled: true,
+        },
+      },
+    });
+
+    res.status(200).json({ message: 'Following club', notificationsEnabled: true });
+  } catch (error) {
+    next(error);
+  }
+});
+
+studentRouter.patch('/clubs/:clubId/notifications', requireAuth, requireRole('student'), async (req, res, next) => {
+  try {
+    const notificationsEnabled = Boolean(req.body?.notificationsEnabled);
+    const club = await Club.findOne({ _id: req.params.clubId, status: 'active' }).select('_id').lean();
+
+    if (!club) {
+      res.status(404).json({ message: 'Club not found' });
+      return;
+    }
+
+    const student = await Student.findById(req.user._id).select('followedClubs notificationPreferences');
+    const isFollowing = (student.followedClubs ?? []).some((clubId) => String(clubId) === String(club._id));
+
+    if (!isFollowing) {
+      throw createError(400, 'Follow the club before changing notifications');
+    }
+
+    const preferences = student.notificationPreferences ?? { email: 'on', clubs: [] };
+    const clubs = preferences.clubs ?? [];
+    const existingPreference = clubs.find((item) => String(item.club) === String(club._id));
+
+    if (existingPreference) {
+      existingPreference.inApp = notificationsEnabled;
+      existingPreference.notificationsEnabled = notificationsEnabled;
+    } else {
+      clubs.push({
+        club: club._id,
+        email: true,
+        inApp: notificationsEnabled,
+        notificationsEnabled,
+      });
+    }
+
+    student.notificationPreferences = {
+      email: normalizeGlobalEmailPreference(preferences.email),
+      clubs,
+    };
+
+    await student.save();
+
+    res.status(200).json({
+      message: notificationsEnabled ? 'Notifications enabled' : 'Notifications disabled',
+      notificationsEnabled,
+    });
   } catch (error) {
     next(error);
   }

@@ -33,6 +33,12 @@ export function unfollowStudentClub(clubId) {
   return apiClient.delete(`/student/clubs/${clubId}/follow`);
 }
 
+export function updateStudentClubNotifications(clubId, notificationsEnabled) {
+  return apiClient.patch(`/student/clubs/${clubId}/notifications`, {
+    notificationsEnabled,
+  });
+}
+
 export function getStudentEvent(eventId) {
   return apiClient.get(`/student/events/${eventId}`);
 }

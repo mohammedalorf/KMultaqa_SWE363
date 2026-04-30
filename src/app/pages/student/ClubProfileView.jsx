@@ -1,16 +1,24 @@
-import { useEffect, useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
-import { Calendar, Clock, Flag, Heart, MapPin, Users } from "lucide-react";
-import { PageContainer } from "../../components/layout/PageContainer";
-import { PageHeader } from "../../components/layout/PageHeader";
-import { Section } from "../../components/layout/Section";
+import {
+  ArrowLeft,
+  Bell,
+  BellOff,
+  Calendar,
+  Clock,
+  FileText,
+  Flag,
+  Heart,
+  MapPin,
+  Pin,
+  Users,
+} from "lucide-react";
 import { EmptyState } from "../../components/layout/EmptyState";
 import { Card } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
 import { Badge } from "../../components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "../../components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
 import { Label } from "../../components/ui/label";
 import { Textarea } from "../../components/ui/textarea";
@@ -22,24 +30,102 @@ import {
   submitStudentReport,
   unfollowStudentClub,
   unlikeStudentPost,
+  updateStudentClubNotifications,
 } from "../../api/studentApi";
 
 const POSTS_PER_PAGE = 2;
+const defaultAccentColor = "#1e3a5f";
+const defaultBackgroundColor = "#f8fafc";
+const defaultCardColor = "#ffffff";
+const defaultPrimaryTextColor = "#111827";
+const defaultSecondaryTextColor = "#6b7280";
+const tabItems = ["posts", "events", "about"];
 
-function ClubAvatar({ logoUrl, name }) {
+function getAccentColor(value) {
+  return /^#[0-9a-f]{6}$/i.test(value || "") ? value : defaultAccentColor;
+}
+
+function getBackgroundColor(value) {
+  return /^#[0-9a-f]{6}$/i.test(value || "") ? value : defaultBackgroundColor;
+}
+
+function getCardColor(value) {
+  return /^#[0-9a-f]{6}$/i.test(value || "") ? value : defaultCardColor;
+}
+
+function getPrimaryTextColor(value) {
+  return /^#[0-9a-f]{6}$/i.test(value || "") ? value : defaultPrimaryTextColor;
+}
+
+function getSecondaryTextColor(value) {
+  return /^#[0-9a-f]{6}$/i.test(value || "") ? value : defaultSecondaryTextColor;
+}
+
+function hexToRgba(hex, alpha) {
+  const normalized = getAccentColor(hex).replace("#", "");
+  const red = parseInt(normalized.slice(0, 2), 16);
+  const green = parseInt(normalized.slice(2, 4), 16);
+  const blue = parseInt(normalized.slice(4, 6), 16);
+  return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
+}
+
+function getLogoShapeClass(shape) {
+  return shape === "rounded-square" ? "rounded-2xl" : "rounded-full";
+}
+
+function ClubAvatar({ logoUrl, name, logoShape = "circle", hero = false }) {
+  const sizeClass = hero ? "h-[100px] w-[100px] text-4xl" : "h-12 w-12 text-base";
+  const borderClass = hero ? "border-4 border-white shadow-[var(--shadow-md)]" : "";
+  const shapeClass = getLogoShapeClass(logoShape);
+
   if (logoUrl) {
     return (
       <img
         src={logoUrl}
         alt={name}
-        className="w-24 h-24 rounded-full object-cover border border-[var(--border)] bg-[var(--accent)] shrink-0"
+        className={`${sizeClass} ${borderClass} ${shapeClass} bg-[var(--card)] object-cover shrink-0`}
       />
     );
   }
 
   return (
-    <div className="w-24 h-24 bg-[var(--primary-soft)] text-[var(--primary)] rounded-full flex items-center justify-center text-3xl font-semibold shrink-0">
+    <div className={`${sizeClass} ${borderClass} ${shapeClass} bg-[var(--card)] text-[var(--primary)] flex items-center justify-center font-semibold shrink-0`}>
       {name?.charAt(0)?.toUpperCase() || "C"}
+    </div>
+  );
+}
+
+function ProfileStat({ icon, value, label, accentColor, cardColor, onClick }) {
+  const Component = onClick ? "button" : "div";
+
+  return (
+    <Component
+      type={onClick ? "button" : undefined}
+      onClick={onClick}
+      className="w-full rounded-xl border border-[var(--border)] bg-[var(--card)] p-6 text-left text-[var(--card-foreground)] shadow-[var(--shadow-sm)] transition-colors hover:bg-[var(--accent)]/35"
+      style={{ backgroundColor: cardColor, borderColor: "transparent", color: "var(--profile-primary-text)" }}
+    >
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <div className="text-2xl font-semibold">{value}</div>
+          <div className="text-sm text-[var(--profile-secondary-text)]">{label}</div>
+        </div>
+        <div
+          className="flex h-10 w-10 items-center justify-center rounded-lg"
+          style={{ backgroundColor: hexToRgba(accentColor, 0.14), color: accentColor }}
+        >
+          {icon}
+        </div>
+      </div>
+    </Component>
+  );
+}
+
+function AboutRow({ label, children }) {
+  return (
+    <div>
+      <div className="text-sm font-medium">{label}</div>
+      <div className="mt-1 text-sm text-[var(--profile-secondary-text)]">{children}</div>
     </div>
   );
 }
@@ -63,6 +149,48 @@ function formatTime(value) {
   });
 }
 
+function FullScreenProfileShell({
+  children,
+  backgroundColor = "var(--background)",
+  primaryTextColor = defaultPrimaryTextColor,
+  secondaryTextColor = defaultSecondaryTextColor,
+}) {
+  const navigate = useNavigate();
+
+  const handleBack = () => {
+    if (window.history.length > 1) {
+      navigate(-1);
+      return;
+    }
+
+    navigate("/student/explore");
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 overflow-y-auto"
+      style={{
+        backgroundColor,
+        color: primaryTextColor,
+        "--profile-primary-text": primaryTextColor,
+        "--profile-secondary-text": secondaryTextColor,
+      }}
+    >
+      <button
+        type="button"
+        onClick={handleBack}
+        aria-label="Go back"
+        className="fixed left-4 top-4 z-[60] flex h-9 w-9 items-center justify-center rounded-full border border-[var(--border)] bg-[var(--card)]/95 text-[var(--foreground)] shadow-[var(--shadow-md)] backdrop-blur transition-colors hover:bg-[var(--accent)]"
+      >
+        <ArrowLeft className="h-4 w-4" />
+      </button>
+      <main className="mx-auto min-h-screen w-full max-w-7xl px-4 pb-10 pt-16 sm:px-6 lg:px-8">
+        {children}
+      </main>
+    </div>
+  );
+}
+
 export default function ClubProfileView() {
   const { id } = useParams();
   const [club, setClub] = useState(null);
@@ -78,6 +206,10 @@ export default function ClubProfileView() {
   const [isReporting, setIsReporting] = useState(false);
   const [postPage, setPostPage] = useState(1);
   const [likingPostIds, setLikingPostIds] = useState([]);
+  const [activeTab, setActiveTab] = useState("posts");
+  const [followersOpen, setFollowersOpen] = useState(false);
+  const [isNotificationBusy, setIsNotificationBusy] = useState(false);
+  const tabsRef = useRef(null);
 
   const loadClub = async () => {
     setIsLoading(true);
@@ -104,6 +236,22 @@ export default function ClubProfileView() {
 
   const visiblePosts = useMemo(() => posts.slice(0, postPage * POSTS_PER_PAGE), [posts, postPage]);
   const hasMorePosts = visiblePosts.length < posts.length;
+  const accentColor = getAccentColor(club?.accentColor ?? club?.themeColor);
+  const backgroundColor = getBackgroundColor(club?.backgroundColor);
+  const cardColor = getCardColor(club?.cardColor);
+  const primaryTextColor = getPrimaryTextColor(club?.primaryTextColor);
+  const secondaryTextColor = getSecondaryTextColor(club?.secondaryTextColor);
+
+  const scrollToTabs = () => {
+    window.requestAnimationFrame(() => {
+      tabsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  };
+
+  const handleStatTabClick = (tab) => {
+    setActiveTab(tab);
+    scrollToTabs();
+  };
 
   const handleToggleFollow = async () => {
     if (!club) return;
@@ -115,14 +263,26 @@ export default function ClubProfileView() {
         await unfollowStudentClub(club.id);
         setIsFollowing(false);
         setClub((current) =>
-          current ? { ...current, followers: Math.max((current.followers ?? 1) - 1, 0) } : current
+          current
+            ? {
+                ...current,
+                followers: Math.max((current.followers ?? 1) - 1, 0),
+                notificationsEnabled: false,
+              }
+            : current
         );
         toast.success("Unfollowed club");
       } else {
-        await followStudentClub(club.id);
+        const { data } = await followStudentClub(club.id);
         setIsFollowing(true);
         setClub((current) =>
-          current ? { ...current, followers: (current.followers ?? 0) + 1 } : current
+          current
+            ? {
+                ...current,
+                followers: (current.followers ?? 0) + 1,
+                notificationsEnabled: data.notificationsEnabled ?? true,
+              }
+            : current
         );
         toast.success("Following club");
       }
@@ -130,6 +290,25 @@ export default function ClubProfileView() {
       toast.error(getApiErrorMessage(error, "Could not update follow status."));
     } finally {
       setIsFollowBusy(false);
+    }
+  };
+
+  const handleToggleNotifications = async () => {
+    if (!club || !isFollowing) return;
+
+    const nextValue = !club.notificationsEnabled;
+    setIsNotificationBusy(true);
+
+    try {
+      const { data } = await updateStudentClubNotifications(club.id, nextValue);
+      setClub((current) =>
+        current ? { ...current, notificationsEnabled: data.notificationsEnabled } : current
+      );
+      toast.success(data.message || (nextValue ? "Notifications enabled" : "Notifications disabled"));
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "Could not update notifications."));
+    } finally {
+      setIsNotificationBusy(false);
     }
   };
 
@@ -184,38 +363,85 @@ export default function ClubProfileView() {
 
   if (isLoading) {
     return (
-      <PageContainer>
+      <FullScreenProfileShell>
         <Card className="p-8 text-center text-sm text-[var(--muted-foreground)]">
           Loading club profile...
         </Card>
-      </PageContainer>
+      </FullScreenProfileShell>
     );
   }
 
   if (loadError || !club) {
     return (
-      <PageContainer>
+      <FullScreenProfileShell>
         <EmptyState title="Club not found" description={loadError || "This club is not available."} />
-      </PageContainer>
+      </FullScreenProfileShell>
     );
   }
 
   return (
-    <PageContainer>
-      <PageHeader
-        eyebrow="Discover"
-        title={club.clubName}
-        subtitle={club.description}
-        actions={
-          <>
-            <Button variant={isFollowing ? "secondary" : "default"} onClick={handleToggleFollow} disabled={isFollowBusy}>
-              <Heart className={`w-4 h-4 mr-2 ${isFollowing ? "fill-current" : ""}`} />
+    <FullScreenProfileShell
+      backgroundColor={backgroundColor}
+      primaryTextColor={primaryTextColor}
+      secondaryTextColor={secondaryTextColor}
+    >
+      <section className="mb-6">
+        <div className="relative">
+          <div className="h-56 overflow-hidden rounded-xl sm:h-72">
+            {club.bannerUrl ? (
+              <img src={club.bannerUrl} alt="" className="h-full w-full object-cover" />
+            ) : (
+              <div
+                className="h-full w-full"
+                style={{
+                  background: `linear-gradient(135deg, ${accentColor}, ${hexToRgba(accentColor, 0.52)})`,
+                }}
+              />
+            )}
+            <div className="absolute inset-0 rounded-xl bg-black/10" />
+          </div>
+
+          <div className="absolute bottom-0 left-6 translate-y-1/2">
+            <ClubAvatar logoUrl={club.logoUrl} name={club.clubName} logoShape={club.logoShape} hero />
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-4 pt-16 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <div className="mb-2 flex flex-wrap items-center gap-2">
+              <Badge variant="outline" className="capitalize" style={{ borderColor: accentColor }}>{club.category}</Badge>
+              <Badge variant="success">{club.status}</Badge>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={handleToggleFollow}
+              disabled={isFollowBusy}
+              style={
+                isFollowing
+                  ? { borderColor: accentColor, color: accentColor }
+                  : { backgroundColor: accentColor, borderColor: accentColor, color: "#fff" }
+              }
+            >
+              <Heart className={`h-4 w-4 ${isFollowing ? "fill-current" : ""}`} />
               {isFollowing ? "Following" : "Follow"}
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={handleToggleNotifications}
+              disabled={!isFollowing || isNotificationBusy}
+              aria-label={club.notificationsEnabled ? "Disable notifications" : "Enable notifications"}
+              style={isFollowing ? { borderColor: accentColor, color: accentColor } : undefined}
+            >
+              {club.notificationsEnabled ? <Bell className="h-4 w-4" /> : <BellOff className="h-4 w-4" />}
             </Button>
             <Dialog open={reportOpen} onOpenChange={setReportOpen}>
               <DialogTrigger asChild>
                 <Button variant="ghost" size="icon" aria-label="Report club">
-                  <Flag className="w-4 h-4" />
+                  <Flag className="h-4 w-4" />
                 </Button>
               </DialogTrigger>
               <DialogContent>
@@ -247,64 +473,105 @@ export default function ClubProfileView() {
                 </div>
               </DialogContent>
             </Dialog>
-          </>
-        }
-      />
-
-      <Section>
-        <Card className="p-6">
-          <div className="flex items-start gap-6">
-            <ClubAvatar logoUrl={club.logoUrl} name={club.clubName} />
-            <div className="flex-1">
-              <div className="flex items-center gap-3 mb-3">
-                <Badge variant="outline">{club.category}</Badge>
-                <Badge variant="success">{club.status}</Badge>
-              </div>
-              <div className="flex flex-wrap items-center gap-6 text-sm">
-                <div className="flex items-center gap-2">
-                  <Users className="w-4 h-4 text-[var(--muted-foreground)]" />
-                  <span>{club.followers} followers</span>
-                </div>
-                <div className="text-[var(--muted-foreground)]">{club.email}</div>
-              </div>
-            </div>
           </div>
-        </Card>
-      </Section>
+        </div>
+      </section>
 
-      <Tabs defaultValue="posts" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="posts">Posts</TabsTrigger>
-          <TabsTrigger value="events">Events</TabsTrigger>
-          <TabsTrigger value="about">About</TabsTrigger>
-        </TabsList>
+      <section className="mb-6 grid gap-4 md:grid-cols-3">
+        <ProfileStat
+          icon={<Users className="h-5 w-5" />}
+          value={club.followers ?? 0}
+          label="Followers"
+          accentColor={accentColor}
+          cardColor={cardColor}
+          onClick={() => setFollowersOpen(true)}
+        />
+        <ProfileStat
+          icon={<Calendar className="h-5 w-5" />}
+          value={events.length}
+          label="Events"
+          accentColor={accentColor}
+          cardColor={cardColor}
+          onClick={() => handleStatTabClick("events")}
+        />
+        <ProfileStat
+          icon={<FileText className="h-5 w-5" />}
+          value={posts.length}
+          label="Posts"
+          accentColor={accentColor}
+          cardColor={cardColor}
+          onClick={() => handleStatTabClick("posts")}
+        />
+      </section>
 
-        <TabsContent value="posts" className="space-y-4">
+      <div ref={tabsRef} className="mb-6 border-b border-[var(--border)] scroll-mt-20">
+        <div className="flex gap-6">
+          {tabItems.map((tab) => {
+            const isActive = activeTab === tab;
+            return (
+              <button
+                key={tab}
+                type="button"
+                onClick={() => setActiveTab(tab)}
+                className={`border-b-2 px-1 pb-3 text-sm capitalize transition-colors ${
+                  isActive ? "font-semibold text-[var(--profile-primary-text)]" : "border-transparent text-[var(--profile-secondary-text)] hover:text-[var(--profile-primary-text)]"
+                }`}
+                style={{ borderBottomColor: isActive ? accentColor : "transparent" }}
+              >
+                {tab}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {activeTab === "posts" && (
+        <div className="space-y-4">
           {visiblePosts.length === 0 ? (
             <EmptyState title="No posts yet" description="This club has not posted anything yet." />
           ) : (
             visiblePosts.map((post) => (
-              <Card key={post.id} className="p-6">
+              <Card
+                key={post.id}
+                className="p-6"
+                style={
+                  post.isPinned
+                    ? {
+                        background: `linear-gradient(135deg, ${hexToRgba(accentColor, 0.1)}, ${cardColor} 54%)`,
+                        borderColor: hexToRgba(accentColor, 0.28),
+                        color: primaryTextColor,
+                      }
+                    : { backgroundColor: cardColor, borderColor: "transparent", color: primaryTextColor }
+                }
+              >
                 <div className="flex items-start gap-3">
-                  <ClubAvatar logoUrl={club.logoUrl} name={club.clubName} />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-2">
+                  <ClubAvatar logoUrl={club.logoUrl} name={club.clubName} logoShape={club.logoShape} />
+                  <div className="min-w-0 flex-1">
+                    <div className="mb-2 flex items-center gap-2">
                       <span className="font-semibold">{club.clubName}</span>
-                      {post.isPinned && <Badge variant="default" className="text-xs">Pinned</Badge>}
+                      {post.isPinned && (
+                        <Badge variant="outline" className="text-xs" style={{ borderColor: accentColor, color: accentColor }}>
+                          <Pin className="h-3 w-3" />
+                          Pinned
+                        </Badge>
+                      )}
                     </div>
-                    <h3 className="text-xl font-semibold mb-2">{post.title}</h3>
-                    <p className="text-[var(--muted-foreground)] mb-3">{post.content}</p>
-                    <div className="flex items-center justify-between gap-3 text-sm text-[var(--muted-foreground)]">
+                    <h3 className="mb-2 text-xl font-semibold">{post.title}</h3>
+                    <p className="mb-3 text-[var(--profile-secondary-text)]">{post.content}</p>
+                    {post.imageUrl && (
+                      <img src={post.imageUrl} alt="" className="mb-4 max-h-80 w-full rounded-lg object-cover" />
+                    )}
+                    <div className="flex items-center justify-between gap-3 text-sm text-[var(--profile-secondary-text)]">
                       <span>{formatDate(post.createdAt)}</span>
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => handleTogglePostLike(post)}
                         disabled={likingPostIds.includes(post.id)}
-                        className={post.isLiked ? "text-[var(--primary)]" : "text-[var(--muted-foreground)]"}
+                        style={post.isLiked ? { color: accentColor } : undefined}
                         aria-label={post.isLiked ? "Unlike post" : "Like post"}
                       >
-                        <Heart className={`w-4 h-4 ${post.isLiked ? "fill-current" : ""}`} />
+                        <Heart className={`h-4 w-4 ${post.isLiked ? "fill-current" : ""}`} />
                         <span>{post.likesCount ?? 0}</span>
                       </Button>
                     </div>
@@ -319,64 +586,86 @@ export default function ClubProfileView() {
               Load More Posts
             </Button>
           )}
-        </TabsContent>
+        </div>
+      )}
 
-        <TabsContent value="events" className="space-y-4">
+      {activeTab === "events" && (
+        <div className="space-y-4">
           {events.length === 0 ? (
             <EmptyState title="No upcoming events" description="Check back soon for new events." />
           ) : (
-            <div className="grid md:grid-cols-2 gap-4">
+            <div className="grid gap-4 md:grid-cols-2">
               {events.map((event) => (
                 <Link key={event.id} to={`/student/event/${event.id}`}>
-                  <Card className="p-6 hover:bg-[var(--accent)] transition-colors">
-                    <h3 className="font-semibold text-lg mb-2">{event.title}</h3>
-                    <p className="text-sm text-[var(--muted-foreground)] mb-4">{event.content}</p>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex items-center gap-2">
-                        <Calendar className="w-4 h-4 text-[var(--muted-foreground)]" />
-                        <span>{formatDate(event.startDateTime)}</span>
+                  <Card className="overflow-hidden transition-colors hover:bg-[var(--accent)]" style={{ backgroundColor: cardColor, borderColor: "transparent", color: primaryTextColor }}>
+                    {event.imageUrl && <img src={event.imageUrl} alt="" className="h-40 w-full object-cover" />}
+                    <div className="p-6">
+                      <h3 className="mb-2 text-lg font-semibold">{event.title}</h3>
+                      <p className="mb-4 text-sm text-[var(--profile-secondary-text)]">{event.content}</p>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex items-center gap-2">
+                          <Calendar className="h-4 w-4 text-[var(--profile-secondary-text)]" />
+                          <span>{formatDate(event.startDateTime)}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Clock className="h-4 w-4 text-[var(--profile-secondary-text)]" />
+                          <span>{formatTime(event.startDateTime)}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <MapPin className="h-4 w-4 text-[var(--profile-secondary-text)]" />
+                          <span>{event.location || "Location TBA"}</span>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Clock className="w-4 h-4 text-[var(--muted-foreground)]" />
-                        <span>{formatTime(event.startDateTime)}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <MapPin className="w-4 h-4 text-[var(--muted-foreground)]" />
-                        <span>{event.location || "Location TBA"}</span>
-                      </div>
+                      <Button className="mt-4 w-full" style={{ backgroundColor: accentColor, color: "#fff" }}>
+                        View Event
+                      </Button>
                     </div>
-                    <Button className="w-full mt-4">View Event</Button>
                   </Card>
                 </Link>
               ))}
             </div>
           )}
-        </TabsContent>
+        </div>
+      )}
 
-        <TabsContent value="about">
-          <Card className="p-6">
-            <h3 className="text-xl font-semibold mb-4">About {club.clubName}</h3>
-            <div className="space-y-4">
-              <div>
-                <Label>Category</Label>
-                <div>{club.category}</div>
-              </div>
-              <div>
-                <Label>Description</Label>
-                <div className="text-[var(--muted-foreground)]">{club.description}</div>
-              </div>
-              <div>
-                <Label>Contact Information</Label>
-                <div className="text-[var(--muted-foreground)]">{club.email}</div>
-              </div>
-              <div>
-                <Label>Followers</Label>
-                <div className="text-[var(--muted-foreground)]">{club.followers} students</div>
-              </div>
+      {activeTab === "about" && (
+        <Card className="p-6" style={{ backgroundColor: cardColor, borderColor: "transparent", color: primaryTextColor }}>
+          <h2 className="mb-5 text-xl font-semibold">About {club.clubName}</h2>
+          <div className="space-y-5">
+            <AboutRow label="Category">
+              <span className="capitalize">{club.category}</span>
+            </AboutRow>
+            <AboutRow label="Description">
+              {club.description}
+            </AboutRow>
+            <AboutRow label="Contact">
+              {club.email}
+            </AboutRow>
+          </div>
+        </Card>
+      )}
+
+      <Dialog open={followersOpen} onOpenChange={setFollowersOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Followers</DialogTitle>
+          </DialogHeader>
+          {(club.followersList ?? []).length === 0 ? (
+            <p className="text-sm text-[var(--profile-secondary-text)]">No followers yet.</p>
+          ) : (
+            <div className="space-y-3">
+              {club.followersList.map((follower) => (
+                <div key={follower.id} className="flex items-center justify-between rounded-lg border border-[var(--border)] p-3" style={{ backgroundColor: cardColor, borderColor: "transparent", color: primaryTextColor }}>
+                  <div>
+                    <div className="font-medium">{follower.fullName}</div>
+                    <div className="text-sm text-[var(--profile-secondary-text)]">{follower.studentId}</div>
+                  </div>
+                </div>
+              ))}
             </div>
-          </Card>
-        </TabsContent>
-      </Tabs>
-    </PageContainer>
+          )}
+        </DialogContent>
+      </Dialog>
+    </FullScreenProfileShell>
   );
 }

@@ -29,13 +29,13 @@ function ClubAvatar({ logoUrl, name, size = "md" }) {
       <img
         src={logoUrl}
         alt={name}
-        className={`${dimensions} rounded-full object-cover border border-[var(--border)] bg-[var(--accent)]`}
+        className={`${dimensions} rounded-full object-cover bg-[var(--card)]`}
       />
     );
   }
 
   return (
-    <div className={`${dimensions} bg-[var(--primary-soft)] text-[var(--primary)] rounded-full flex items-center justify-center font-semibold border border-[var(--primary)]/20`}>
+    <div className={`${dimensions} bg-[var(--card)] text-[var(--primary)] rounded-full flex items-center justify-center font-semibold`}>
       {initial}
     </div>
   );

@@ -24,6 +24,13 @@ const optionFieldTypes = new Set(['checkbox', 'radio']);
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const studentIdPattern = /^s\d{9}$/i;
+const accentColorPattern = /^#[0-9a-f]{6}$/i;
+const defaultAccentColor = '#1e3a5f';
+const defaultBackgroundColor = '#f8fafc';
+const defaultCardColor = '#ffffff';
+const defaultPrimaryTextColor = '#111827';
+const defaultSecondaryTextColor = '#6b7280';
+const logoShapes = new Set(['circle', 'rounded-square']);
 
 function assertObjectId(value, resourceName) {
   if (!mongoose.isValidObjectId(value)) {
@@ -41,6 +48,78 @@ function requiredString(value, fieldName) {
 
 function optionalString(value) {
   return typeof value === 'string' && value.trim() ? value.trim() : undefined;
+}
+
+function normalizeAccentColor(value) {
+  if (value === undefined || value === null || value === '') {
+    return defaultAccentColor;
+  }
+
+  if (typeof value !== 'string' || !accentColorPattern.test(value.trim())) {
+    throw createError(400, 'Accent color must be a valid hex color');
+  }
+
+  return value.trim().toLowerCase();
+}
+
+function normalizeBackgroundColor(value) {
+  if (value === undefined || value === null || value === '') {
+    return defaultBackgroundColor;
+  }
+
+  if (typeof value !== 'string' || !accentColorPattern.test(value.trim())) {
+    throw createError(400, 'Background color must be a valid hex color');
+  }
+
+  return value.trim().toLowerCase();
+}
+
+function normalizeCardColor(value) {
+  if (value === undefined || value === null || value === '') {
+    return defaultCardColor;
+  }
+
+  if (typeof value !== 'string' || !accentColorPattern.test(value.trim())) {
+    throw createError(400, 'Cards color must be a valid hex color');
+  }
+
+  return value.trim().toLowerCase();
+}
+
+function normalizePrimaryTextColor(value) {
+  if (value === undefined || value === null || value === '') {
+    return defaultPrimaryTextColor;
+  }
+
+  if (typeof value !== 'string' || !accentColorPattern.test(value.trim())) {
+    throw createError(400, 'Primary text color must be a valid hex color');
+  }
+
+  return value.trim().toLowerCase();
+}
+
+function normalizeSecondaryTextColor(value) {
+  if (value === undefined || value === null || value === '') {
+    return defaultSecondaryTextColor;
+  }
+
+  if (typeof value !== 'string' || !accentColorPattern.test(value.trim())) {
+    throw createError(400, 'Secondary text color must be a valid hex color');
+  }
+
+  return value.trim().toLowerCase();
+}
+
+function normalizeLogoShape(value) {
+  if (value === undefined || value === null || value === '') {
+    return 'circle';
+  }
+
+  if (typeof value !== 'string' || !logoShapes.has(value)) {
+    throw createError(400, 'Logo shape is invalid');
+  }
+
+  return value;
 }
 
 function requireActiveClub(req) {
@@ -134,11 +213,18 @@ function serializeProfile(club) {
     representativeStudentId: club.representativeStudentId,
     logoUrl: club.logoUrl ?? '',
     bannerUrl: club.bannerUrl ?? '',
+    accentColor: club.accentColor ?? club.themeColor ?? defaultAccentColor,
+    backgroundColor: club.backgroundColor ?? defaultBackgroundColor,
+    cardColor: club.cardColor ?? defaultCardColor,
+    primaryTextColor: club.primaryTextColor ?? defaultPrimaryTextColor,
+    secondaryTextColor: club.secondaryTextColor ?? defaultSecondaryTextColor,
+    logoShape: club.logoShape ?? 'circle',
     socialLinks: {
       instagram: club.socialLinks?.instagram ?? '',
       twitter: club.socialLinks?.twitter ?? '',
       linkedin: club.socialLinks?.linkedin ?? '',
       website: club.socialLinks?.website ?? '',
+      whatsapp: club.socialLinks?.whatsapp ?? '',
     },
     status: club.status,
     suspensionReason: club.suspensionReason ?? '',
@@ -206,6 +292,7 @@ function normalizeSocialLinks(input) {
     twitter: optionalString(input.twitter),
     linkedin: optionalString(input.linkedin),
     website: optionalString(input.website),
+    whatsapp: optionalString(input.whatsapp),
   };
 }
 
@@ -483,6 +570,30 @@ clubRouter.patch('/profile', requireAuth, requireRole('club'), async (req, res, 
       club.bannerUrl = optionalString(req.body.bannerUrl);
     }
 
+    if (req.body?.accentColor !== undefined || req.body?.themeColor !== undefined) {
+      club.accentColor = normalizeAccentColor(req.body.accentColor ?? req.body.themeColor);
+    }
+
+    if (req.body?.backgroundColor !== undefined) {
+      club.backgroundColor = normalizeBackgroundColor(req.body.backgroundColor);
+    }
+
+    if (req.body?.cardColor !== undefined) {
+      club.cardColor = normalizeCardColor(req.body.cardColor);
+    }
+
+    if (req.body?.primaryTextColor !== undefined) {
+      club.primaryTextColor = normalizePrimaryTextColor(req.body.primaryTextColor);
+    }
+
+    if (req.body?.secondaryTextColor !== undefined) {
+      club.secondaryTextColor = normalizeSecondaryTextColor(req.body.secondaryTextColor);
+    }
+
+    if (req.body?.logoShape !== undefined) {
+      club.logoShape = normalizeLogoShape(req.body.logoShape);
+    }
+
     if (req.body?.socialLinks !== undefined) {
       club.socialLinks = normalizeSocialLinks(req.body.socialLinks);
     }
@@ -523,13 +634,21 @@ clubRouter.get('/posts', requireAuth, requireRole('club'), async (req, res, next
 clubRouter.post('/posts', requireAuth, requireRole('club'), async (req, res, next) => {
   try {
     requireActiveClub(req);
+    const shouldPinPost = Boolean(req.body?.isPinned);
+
+    if (shouldPinPost) {
+      await Post.updateMany(
+        { club: req.user._id, status: 'active', isPinned: true },
+        { $set: { isPinned: false } }
+      );
+    }
 
     const post = await Post.create({
       club: req.user._id,
       title: requiredString(req.body?.title, 'Post title'),
       content: requiredString(req.body?.content, 'Post content'),
       imageUrl: typeof req.body?.imageUrl === 'string' ? req.body.imageUrl.trim() : undefined,
-      isPinned: Boolean(req.body?.isPinned),
+      isPinned: shouldPinPost,
       status: 'active',
     });
 
@@ -577,6 +696,13 @@ clubRouter.patch('/posts/:postId', requireAuth, requireRole('club'), async (req,
 
     if (req.body?.isPinned !== undefined) {
       post.isPinned = Boolean(req.body.isPinned);
+
+      if (post.isPinned) {
+        await Post.updateMany(
+          { club: req.user._id, _id: { $ne: post._id }, status: 'active', isPinned: true },
+          { $set: { isPinned: false } }
+        );
+      }
     }
 
     const updatedPost = await post.save();

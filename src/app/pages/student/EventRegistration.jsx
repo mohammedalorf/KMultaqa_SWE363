@@ -21,13 +21,13 @@ function ClubAvatar({ logoUrl, name }) {
       <img
         src={logoUrl}
         alt={name}
-        className="w-16 h-16 rounded-full object-cover shrink-0 border border-[var(--border)] bg-[var(--accent)]"
+        className="w-16 h-16 rounded-full object-cover shrink-0 bg-[var(--card)]"
       />
     );
   }
 
   return (
-    <div className="w-16 h-16 bg-[var(--primary-soft)] text-[var(--primary)] rounded-full flex items-center justify-center text-2xl font-semibold shrink-0 border border-[var(--primary)]/20">
+    <div className="w-16 h-16 bg-[var(--card)] text-[var(--primary)] rounded-full flex items-center justify-center text-2xl font-semibold shrink-0">
       {name?.charAt(0)?.toUpperCase() || "C"}
     </div>
   );

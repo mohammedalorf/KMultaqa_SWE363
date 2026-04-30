@@ -26,6 +26,9 @@ const socialLinksSchema = new Schema(
     website: {
       type: String,
     },
+    whatsapp: {
+      type: String,
+    },
   },
   { _id: false }
 );
@@ -85,6 +88,36 @@ const clubSchema = new Schema({
   },
   bannerUrl: {
     type: String,
+  },
+  accentColor: {
+    type: String,
+    default: '#1e3a5f',
+    trim: true,
+  },
+  backgroundColor: {
+    type: String,
+    default: '#f8fafc',
+    trim: true,
+  },
+  cardColor: {
+    type: String,
+    default: '#ffffff',
+    trim: true,
+  },
+  primaryTextColor: {
+    type: String,
+    default: '#111827',
+    trim: true,
+  },
+  secondaryTextColor: {
+    type: String,
+    default: '#6b7280',
+    trim: true,
+  },
+  logoShape: {
+    type: String,
+    enum: ['circle', 'rounded-square'],
+    default: 'circle',
   },
   socialLinks: {
     type: socialLinksSchema,

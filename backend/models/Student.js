@@ -17,6 +17,10 @@ const studentClubNotificationPreferenceSchema = new Schema(
       type: Boolean,
       default: true,
     },
+    notificationsEnabled: {
+      type: Boolean,
+      default: true,
+    },
   },
   { _id: false }
 );

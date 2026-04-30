@@ -23,7 +23,7 @@ function studentAllowsInAppNotification(student, clubId) {
     return String(item.club) === String(clubId);
   });
 
-  return preference?.inApp !== false;
+  return preference?.inApp !== false && preference?.notificationsEnabled !== false;
 }
 
 export async function notifyFollowersAboutClubContent({ clubId, targetId, targetModel, type }) {
