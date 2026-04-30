@@ -7,6 +7,7 @@ import { authRouter } from './modules/auth/auth.routes.js';
 import { clubRouter } from './modules/club/club.routes.js';
 import { notificationRouter } from './modules/notifications/notification.routes.js';
 import { studentRouter } from './modules/student/student.routes.js';
+import { uploadRouter } from './modules/uploads/upload.routes.js';
 
 function corsMiddleware(req, res, next) {
   const origin = req.headers.origin;
@@ -45,6 +46,7 @@ export function createApp() {
   app.use('/api/club', clubRouter);
   app.use('/api/notifications', notificationRouter);
   app.use('/api/student', studentRouter);
+  app.use('/api/uploads', uploadRouter);
 
   app.use((req, res) => {
     res.status(404).json({

@@ -7,12 +7,14 @@
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",
     "create-admin": "node src/scripts/create-admin.js",
-    "check": "node --check src/server.js && node --check src/config/db.js && node --check src/config/env.js && node --check src/scripts/create-admin.js && node --check src/modules/admin/admin.routes.js && node --check src/modules/auth/auth.routes.js && node --check src/modules/auth/auth.service.js && node --check src/modules/club/club.routes.js && node --check src/modules/notifications/notification.routes.js && node --check src/modules/student/student.routes.js && node --check src/middlewares/auth.middleware.js && node --check src/utils/email.js && node --check src/utils/jwt.js && node --check src/utils/notifications.js && node --check src/utils/password.js && node --check src/utils/tokens.js && node --check models/Admin.js && node --check models/Announcement.js && node --check models/Club.js && node --check models/ClubRequest.js && node --check models/Event.js && node --check models/EventRegistration.js && node --check models/Notification.js && node --check models/Post.js && node --check models/Report.js && node --check models/Student.js"
+    "check": "node --check src/server.js && node --check src/config/db.js && node --check src/config/env.js && node --check src/scripts/create-admin.js && node --check src/modules/admin/admin.routes.js && node --check src/modules/auth/auth.routes.js && node --check src/modules/auth/auth.service.js && node --check src/modules/club/club.routes.js && node --check src/modules/notifications/notification.routes.js && node --check src/modules/student/student.routes.js && node --check src/modules/uploads/upload.routes.js && node --check src/middlewares/auth.middleware.js && node --check src/utils/email.js && node --check src/utils/jwt.js && node --check src/utils/notifications.js && node --check src/utils/password.js && node --check src/utils/tokens.js && node --check models/Admin.js && node --check models/Announcement.js && node --check models/Club.js && node --check models/ClubRequest.js && node --check models/Event.js && node --check models/EventRegistration.js && node --check models/Notification.js && node --check models/Post.js && node --check models/Report.js && node --check models/Student.js"
   },
   "dependencies": {
+    "cloudinary": "^2.10.0",
     "express": "^4.21.2",
     "mongodb": "^6.16.0",
     "mongoose": "^9.6.0",
+    "multer": "^2.1.1",
     "nodemailer": "^8.0.5"
   },
   "devDependencies": {

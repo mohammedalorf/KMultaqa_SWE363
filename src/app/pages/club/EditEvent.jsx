@@ -14,6 +14,7 @@ import { Switch } from "../../components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
 import { getApiErrorMessage } from "../../api/apiClient";
 import { getClubEvent, updateClubEvent } from "../../api/clubApi";
+import { ImageUploadField } from "../../components/ImageUploadField";
 
 const categories = [
   { value: "academic", label: "Academic" },
@@ -349,8 +350,15 @@ export default function EditEvent() {
                   <Input id="capacity" type="number" min="1" value={capacity} onChange={(e) => setCapacity(e.target.value)} />
                 </div>
                 <div>
-                  <Label htmlFor="imageUrl">Image URL (optional)</Label>
-                  <Input id="imageUrl" value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="https://..." />
+                  <ImageUploadField
+                    id="eventImage"
+                    label="Event Image (optional)"
+                    value={imageUrl}
+                    onChange={setImageUrl}
+                    folder="events"
+                    disabled={isSaving}
+                    aspectRatio={16 / 9}
+                  />
                 </div>
               </div>
 

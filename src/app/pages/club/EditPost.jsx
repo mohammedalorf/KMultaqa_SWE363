@@ -12,6 +12,7 @@ import { Label } from "../../components/ui/label";
 import { Switch } from "../../components/ui/switch";
 import { getApiErrorMessage } from "../../api/apiClient";
 import { getClubPost, updateClubPost } from "../../api/clubApi";
+import { ImageUploadField } from "../../components/ImageUploadField";
 
 export default function EditPost() {
   const navigate = useNavigate();
@@ -105,8 +106,15 @@ export default function EditPost() {
               </div>
 
               <div>
-                <Label htmlFor="imageUrl">Image URL (optional)</Label>
-                <Input id="imageUrl" value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="https://..." />
+                <ImageUploadField
+                  id="postImage"
+                  label="Post Image (optional)"
+                  value={imageUrl}
+                  onChange={setImageUrl}
+                  folder="posts"
+                  disabled={isSaving}
+                  aspectRatio={16 / 9}
+                />
               </div>
 
               <div className="flex items-center justify-between p-4 bg-[var(--accent)] rounded-lg">

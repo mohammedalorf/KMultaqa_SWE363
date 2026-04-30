@@ -77,6 +77,9 @@ const smtpEnabled = getBooleanEnv('SMTP_ENABLED', false);
 const smtpUser = getEnv('SMTP_USER');
 const smtpPass = getEnv('SMTP_PASS');
 const corsOrigins = getCorsOrigins();
+const cloudinaryCloudName = getEnv('CLOUDINARY_CLOUD_NAME');
+const cloudinaryApiKey = getEnv('CLOUDINARY_API_KEY');
+const cloudinaryApiSecret = getEnv('CLOUDINARY_API_SECRET');
 
 if (nodeEnv === 'production' && jwtSecret === 'replace-with-a-long-random-secret') {
   throw new Error('JWT_SECRET must be configured in production');
@@ -104,6 +107,13 @@ export const env = {
     user: smtpUser,
     pass: smtpPass,
     from: getEnv('SMTP_FROM', 'KMultaqa <no-reply@kmultaqa.local>'),
+  },
+  cloudinary: {
+    cloudName: cloudinaryCloudName,
+    apiKey: cloudinaryApiKey,
+    apiSecret: cloudinaryApiSecret,
+    folder: getEnv('CLOUDINARY_FOLDER', 'kmultaqa'),
+    maxImageBytes: getNumberEnv('CLOUDINARY_MAX_IMAGE_BYTES', 5 * 1024 * 1024),
   },
   emailVerificationExpiresInSeconds: getNumberEnv(
     'EMAIL_VERIFICATION_EXPIRES_IN_SECONDS',

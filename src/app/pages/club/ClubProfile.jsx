@@ -11,6 +11,7 @@ import { Label } from "../../components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
 import { getApiErrorMessage } from "../../api/apiClient";
 import { getClubProfile, updateClubProfile } from "../../api/clubApi";
+import { ImageUploadField } from "../../components/ImageUploadField";
 
 const categories = [
   { value: "academic", label: "Academic" },
@@ -158,21 +159,27 @@ export default function ClubProfile() {
             <div className="text-sm text-[var(--muted-foreground)]">Loading profile...</div>
           ) : (
             <div className="space-y-6">
-              <div>
-                <Label>Club Logo</Label>
-                <div className="flex items-center gap-4 mt-2">
-                  {form.logoUrl ? (
-                    <img
-                      src={form.logoUrl}
-                      alt={form.clubName}
-                      className="w-24 h-24 rounded-full object-cover border border-[var(--border)] bg-[var(--accent)]"
-                    />
-                  ) : (
-                    <div className="w-24 h-24 bg-[var(--primary-soft)] text-[var(--primary)] rounded-full flex items-center justify-center text-3xl font-semibold">
-                      {form.clubName?.charAt(0)?.toUpperCase() || "C"}
-                    </div>
-                  )}
-                </div>
+              <div className="grid md:grid-cols-2 gap-4">
+                <ImageUploadField
+                  id="logoUrl"
+                  label="Club Logo"
+                  value={form.logoUrl}
+                  onChange={(value) => updateField("logoUrl", value)}
+                  folder="clubs"
+                  disabled={isSaving}
+                  previewClassName="h-32 w-32 rounded-full"
+                  aspectRatio={1}
+                />
+                <ImageUploadField
+                  id="bannerUrl"
+                  label="Club Banner"
+                  value={form.bannerUrl}
+                  onChange={(value) => updateField("bannerUrl", value)}
+                  folder="clubs"
+                  disabled={isSaving}
+                  previewClassName="h-32"
+                  aspectRatio={3}
+                />
               </div>
 
               <div className="grid md:grid-cols-2 gap-4">
@@ -204,19 +211,9 @@ export default function ClubProfile() {
                 <p className="text-sm text-[var(--muted-foreground)] mt-1">{form.description.length} / 500 characters</p>
               </div>
 
-              <div className="grid md:grid-cols-3 gap-4">
-                <div>
-                  <Label htmlFor="email">Contact Email</Label>
-                  <Input id="email" type="email" value={form.email} onChange={(e) => updateField("email", e.target.value)} />
-                </div>
-                <div>
-                  <Label htmlFor="logoUrl">Logo URL</Label>
-                  <Input id="logoUrl" value={form.logoUrl} onChange={(e) => updateField("logoUrl", e.target.value)} />
-                </div>
-                <div>
-                  <Label htmlFor="bannerUrl">Banner URL</Label>
-                  <Input id="bannerUrl" value={form.bannerUrl} onChange={(e) => updateField("bannerUrl", e.target.value)} />
-                </div>
+              <div>
+                <Label htmlFor="email">Contact Email</Label>
+                <Input id="email" type="email" value={form.email} onChange={(e) => updateField("email", e.target.value)} />
               </div>
 
               <div className="grid md:grid-cols-4 gap-4">
@@ -225,7 +222,7 @@ export default function ClubProfile() {
                   <Input id="instagram" value={form.socialLinks.instagram} onChange={(e) => updateSocialLink("instagram", e.target.value)} />
                 </div>
                 <div>
-                  <Label htmlFor="twitter">Twitter</Label>
+                  <Label htmlFor="twitter">X</Label>
                   <Input id="twitter" value={form.socialLinks.twitter} onChange={(e) => updateSocialLink("twitter", e.target.value)} />
                 </div>
                 <div>

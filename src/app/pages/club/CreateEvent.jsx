@@ -14,6 +14,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { createClubEvent } from "../../api/clubApi";
 import { getApiErrorMessage } from "../../api/apiClient";
+import { ImageUploadField } from "../../components/ImageUploadField";
 
 const categories = [
   { value: "academic", label: "Academic" },
@@ -274,8 +275,15 @@ export default function CreateEvent() {
                 <Input id="capacity" type="number" min="1" value={capacity} onChange={(e) => setCapacity(e.target.value)} />
               </div>
               <div>
-                <Label htmlFor="imageUrl">Image URL (optional)</Label>
-                <Input id="imageUrl" value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="https://..." />
+                <ImageUploadField
+                  id="eventImage"
+                  label="Event Image (optional)"
+                  value={imageUrl}
+                  onChange={setImageUrl}
+                  folder="events"
+                  disabled={isPublishing}
+                  aspectRatio={16 / 9}
+                />
               </div>
             </div>
 

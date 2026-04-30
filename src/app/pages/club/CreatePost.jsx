@@ -12,6 +12,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { createClubPost } from "../../api/clubApi";
 import { getApiErrorMessage } from "../../api/apiClient";
+import { ImageUploadField } from "../../components/ImageUploadField";
 
 export default function CreatePost() {
   const navigate = useNavigate();
@@ -69,8 +70,15 @@ export default function CreatePost() {
             </div>
 
             <div>
-              <Label htmlFor="imageUrl">Image URL (optional)</Label>
-              <Input id="imageUrl" value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="https://..." />
+              <ImageUploadField
+                id="postImage"
+                label="Post Image (optional)"
+                value={imageUrl}
+                onChange={setImageUrl}
+                folder="posts"
+                disabled={isPublishing}
+                aspectRatio={16 / 9}
+              />
             </div>
 
             <div className="flex items-center justify-between p-4 bg-[var(--accent)] rounded-lg">
