@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { LogOut, Menu, X, Bell } from "lucide-react";
 import { getNotifications, markNotificationsRead } from "../../api/notificationApi";
@@ -107,10 +107,60 @@ export function DashboardLayout({ role, userName, userLogo, sidebarItems, childr
   const [unreadCount, setUnreadCount] = useState(0);
   const [notificationsLoading, setNotificationsLoading] = useState(false);
   const isStudent = role === "student";
+  const notificationsOpenRef = useRef(false);
+  const markingNotificationsReadRef = useRef(false);
+
+  const loadNotifications = useCallback(async ({ silent = false } = {}) => {
+    if (!isStudent) {
+      return;
+    }
+
+    if (!silent) {
+      setNotificationsLoading(true);
+    }
+
+    try {
+      const { data } = await getNotifications();
+
+      if (markingNotificationsReadRef.current) {
+        return;
+      }
+
+      setNotifications(data.notifications || []);
+      setUnreadCount(data.unreadCount || 0);
+    } catch {
+      setNotifications([]);
+      setUnreadCount(0);
+    } finally {
+      if (!silent) {
+        setNotificationsLoading(false);
+      }
+    }
+  }, [isStudent]);
+
+  const markNotificationsAsViewed = useCallback(async () => {
+    if (!isStudent || markingNotificationsReadRef.current) {
+      return;
+    }
+
+    setUnreadCount(0);
+    setNotifications((items) => items.map((item) => ({ ...item, isRead: true })));
+    markingNotificationsReadRef.current = true;
+
+    try {
+      await markNotificationsRead();
+    } catch {
+      // Reload below restores the unread count if the server update fails.
+    } finally {
+      markingNotificationsReadRef.current = false;
+      await loadNotifications({ silent: true });
+    }
+  }, [isStudent, loadNotifications]);
 
   useEffect(() => {
     setMobileOpen(false);
     setNotificationsOpen(false);
+    notificationsOpenRef.current = false;
   }, [location.pathname]);
 
   useEffect(() => {
@@ -120,38 +170,24 @@ export function DashboardLayout({ role, userName, userLogo, sidebarItems, childr
 
     let cancelled = false;
 
-    const loadNotifications = async () => {
-      setNotificationsLoading(true);
-
-      try {
-        const { data } = await getNotifications();
-
-        if (cancelled) {
-          return;
-        }
-
-        setNotifications(data.notifications || []);
-        setUnreadCount(data.unreadCount || 0);
-      } catch {
-        if (!cancelled) {
-          setNotifications([]);
-          setUnreadCount(0);
-        }
-      } finally {
-        if (!cancelled) {
-          setNotificationsLoading(false);
-        }
-      }
-    };
-
     loadNotifications();
-    const intervalId = window.setInterval(loadNotifications, 10000);
+    const intervalId = window.setInterval(() => {
+      if (!cancelled && !notificationsOpenRef.current) {
+        loadNotifications({ silent: true });
+      }
+    }, 10000);
 
     return () => {
       cancelled = true;
       window.clearInterval(intervalId);
     };
-  }, [isStudent]);
+  }, [isStudent, loadNotifications]);
+
+  useEffect(() => {
+    if (notificationsOpen && unreadCount > 0) {
+      markNotificationsAsViewed();
+    }
+  }, [markNotificationsAsViewed, notificationsOpen, unreadCount]);
 
   const handleLogout = () => {
     localStorage.removeItem("authToken");
@@ -184,24 +220,13 @@ export function DashboardLayout({ role, userName, userLogo, sidebarItems, childr
   const handleNotificationsClick = async () => {
     const willOpen = !notificationsOpen;
     setNotificationsOpen(willOpen);
+    notificationsOpenRef.current = willOpen;
 
     if (!willOpen || !isStudent || unreadCount === 0) {
       return;
     }
 
-    setUnreadCount(0);
-    setNotifications((items) => items.map((item) => ({ ...item, isRead: true })));
-
-    try {
-      await markNotificationsRead();
-    } catch {
-      await getNotifications()
-        .then(({ data }) => {
-          setNotifications(data.notifications || []);
-          setUnreadCount(data.unreadCount || 0);
-        })
-        .catch(() => {});
-    }
+    await markNotificationsAsViewed();
   };
 
   return (
@@ -309,10 +334,22 @@ export function DashboardLayout({ role, userName, userLogo, sidebarItems, childr
                       <div className="px-4 py-4 text-sm text-[var(--muted-foreground)]">No new notifications.</div>
                     ) : (
                       notifications.map((notification) => (
-                        <div key={notification.id} className="px-4 py-3 border-b border-[var(--border)] last:border-b-0">
-                          <p className="text-sm text-[var(--foreground)] leading-snug">{notification.message}</p>
+                        <div
+                          key={notification.id}
+                          className={`px-4 py-3 border-b border-[var(--border)] last:border-b-0 ${
+                            notification.isRead ? "bg-transparent" : "bg-[var(--primary-soft)]/45"
+                          }`}
+                        >
+                          <div className="flex items-start gap-2.5">
+                            {!notification.isRead && (
+                              <span className="mt-1.5 h-2 w-2 rounded-full bg-[var(--primary)] shrink-0" aria-hidden />
+                            )}
+                            <p className={`text-sm leading-snug ${notification.isRead ? "text-[var(--muted-foreground)]" : "text-[var(--foreground)]"}`}>
+                              {notification.message}
+                            </p>
+                          </div>
                           {notification.createdAt && (
-                            <p className="text-xs text-[var(--muted-foreground)] mt-1">
+                            <p className="text-xs text-[var(--muted-foreground)] mt-1 pl-4">
                               {new Date(notification.createdAt).toLocaleString()}
                             </p>
                           )}
