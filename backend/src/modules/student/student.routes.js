@@ -17,6 +17,7 @@ const defaultBackgroundColor = '#f8fafc';
 const defaultCardColor = '#ffffff';
 const defaultPrimaryTextColor = '#111827';
 const defaultSecondaryTextColor = '#6b7280';
+const minClubSearchQueryLength = 2;
 
 function objectIdTimestamp(id) {
   return id?.getTimestamp?.() ?? new Date();
@@ -224,6 +225,24 @@ function normalizeAnswers(answers) {
       answer: typeof answer.answer === 'string' ? answer.answer.trim() : '',
     }))
     .filter((answer) => answer.fieldLabel && answer.answer);
+}
+
+function getClubSearchRank(club, query) {
+  if (!query) {
+    return 0;
+  }
+
+  const name = String(club.clubName ?? '').toLowerCase();
+
+  if (name === query) {
+    return 0;
+  }
+
+  if (name.startsWith(query)) {
+    return 1;
+  }
+
+  return 2;
 }
 
 function isStudentIdField(label = '') {
@@ -725,9 +744,17 @@ studentRouter.delete('/events/:eventId/registration', requireAuth, requireRole('
 
 studentRouter.get('/clubs', requireAuth, requireRole('student'), async (req, res, next) => {
   try {
-    const query = typeof req.query.search === 'string' ? req.query.search.trim() : '';
+    const query = typeof req.query.search === 'string' ? req.query.search.trim().toLowerCase() : '';
     const category = typeof req.query.category === 'string' ? req.query.category.trim() : 'all';
     const filters = { status: 'active' };
+
+    if (query && query.length < minClubSearchQueryLength) {
+      res.status(200).json({
+        clubs: [],
+        message: `Enter at least ${minClubSearchQueryLength} characters to search clubs`,
+      });
+      return;
+    }
 
     if (query) {
       filters.clubName = { $regex: query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), $options: 'i' };
@@ -740,15 +767,29 @@ studentRouter.get('/clubs', requireAuth, requireRole('student'), async (req, res
     const [clubs, student] = await Promise.all([
       Club.find(filters)
         .select('clubName description logoUrl accentColor backgroundColor cardColor primaryTextColor secondaryTextColor logoShape category status followers')
-        .sort({ clubName: 1 })
         .limit(100)
         .lean(),
       Student.findById(req.user._id).select('followedClubs').lean(),
     ]);
     const followedClubIds = new Set((student?.followedClubs ?? []).map((id) => String(id)));
+    const rankedClubs = clubs.sort((a, b) => {
+      const rankDifference = getClubSearchRank(a, query) - getClubSearchRank(b, query);
+
+      if (rankDifference !== 0) {
+        return rankDifference;
+      }
+
+      const followerDifference = (b.followers?.length ?? 0) - (a.followers?.length ?? 0);
+
+      if (followerDifference !== 0) {
+        return followerDifference;
+      }
+
+      return String(a.clubName).localeCompare(String(b.clubName));
+    });
 
     res.status(200).json({
-      clubs: clubs.map((club) => ({
+      clubs: rankedClubs.map((club) => ({
         ...serializeClub(club),
         isFollowing: followedClubIds.has(String(club._id)),
       })),

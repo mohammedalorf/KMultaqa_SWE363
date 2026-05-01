@@ -60,10 +60,10 @@ Source checked against `phase3-REQ.pdf`.
   - [x] Validate student ID format when a registration field asks for student ID.
   - [x] Keep duplicate-registration and deadline checks server-side.
 
-- [ ] Fix club search relevance for FR-19.
-  - [ ] Enforce minimum query behavior server-side if required.
-  - [ ] Sort/rank by relevance instead of only club name.
-  - [ ] Optionally include follower count as secondary sort.
+- [x] Fix club search relevance for FR-19.
+  - [x] Enforce minimum query behavior server-side if required.
+  - [x] Sort/rank by relevance instead of only club name.
+  - [x] Optionally include follower count as secondary sort.
 
 ## Frontend
 
