@@ -152,7 +152,7 @@ export default function ExploreClubs() {
 
         <div className="flex flex-wrap items-center gap-2 text-xs text-[var(--muted-foreground)]">
           <span>Search rule: minimum {MIN_QUERY_LENGTH} characters.</span>
-          <span>Results are filtered by name and shown alphabetically.</span>
+          <span>Results are ranked by match quality, then follower count.</span>
         </div>
 
         {!shouldSearch && (

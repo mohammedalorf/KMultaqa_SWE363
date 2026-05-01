@@ -73,12 +73,12 @@ Source checked against `phase3-REQ.pdf`.
   - [x] Add appeal detail review dialog/page.
   - [x] Support uphold, overturn, and modify decisions.
 
-- [ ] Expand reports moderation UI for FR-2 and FR-4.
-  - [ ] Add action selector: remove, hide, warn, suspend, dismiss.
-  - [ ] Require reason/category for hide/remove.
-  - [ ] Require warning type/message for warn.
-  - [ ] Require suspension reason/duration for suspend.
-  - [ ] Show disabled state for reports that are not actionable.
+- [x] Expand reports moderation UI for FR-2 and FR-4.
+  - [x] Add action selector: remove, hide, warn, suspend, dismiss.
+  - [x] Require reason/category for hide/remove.
+  - [x] Require warning type/message for warn.
+  - [x] Require suspension reason/duration for suspend.
+  - [x] Show disabled state for reports that are not actionable.
 
 - [ ] Add club status history/timeline UI for FR-3.
   - [ ] Show previous status changes.
@@ -97,13 +97,13 @@ Source checked against `phase3-REQ.pdf`.
   - [ ] Validate future scheduled publish date in UI.
   - [ ] Show notification dispatch result if applicable.
 
-- [ ] Fix student event registration form validation for FR-21.
-  - [ ] Detect student ID fields.
-  - [ ] Show explicit student ID format errors.
+- [x] Fix student event registration form validation for FR-21.
+  - [x] Detect student ID fields.
+  - [x] Show explicit student ID format errors.
 
-- [ ] Align club search UI with actual backend behavior for FR-19.
-  - [ ] Either implement the stated relevance sort in backend or remove the claim from UI.
-  - [ ] Keep minimum-input guidance consistent with backend.
+- [x] Align club search UI with actual backend behavior for FR-19.
+  - [x] Either implement the stated relevance sort in backend or remove the claim from UI.
+  - [x] Keep minimum-input guidance consistent with backend.
 
 ## Architecture / Requirement Mismatch
 
