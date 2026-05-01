@@ -9,6 +9,8 @@ import { Input } from "../../components/ui/input";
 import { Download, Info } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
+import { getAdminClubs, getAdminReports } from "../../api/adminApi";
+import { getApiErrorMessage } from "../../api/apiClient";
 
 const SIZE_LIMIT = 5000;
 const BASE_MULTIPLIER = {
@@ -25,18 +27,61 @@ function getDaysBetween(dateFrom, dateTo) {
   return Math.floor((to - from) / (24 * 60 * 60 * 1000)) + 1;
 }
 
+function escapeCsv(value) {
+  const text = String(value ?? "");
+  return `"${text.replace(/"/g, '""')}"`;
+}
+
+function buildCsv(headers, rows) {
+  return [
+    headers.map(escapeCsv).join(","),
+    ...rows.map((row) => headers.map((header) => escapeCsv(row[header])).join(",")),
+  ].join("\n");
+}
+
+function downloadCsv(filename, csvContent) {
+  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+function isWithinDateRange(value, dateFrom, dateTo) {
+  if (!value || (!dateFrom && !dateTo)) return true;
+
+  const timestamp = new Date(value).getTime();
+  if (Number.isNaN(timestamp)) return true;
+
+  if (dateFrom && timestamp < new Date(`${dateFrom}T00:00:00`).getTime()) {
+    return false;
+  }
+
+  if (dateTo && timestamp > new Date(`${dateTo}T23:59:59`).getTime()) {
+    return false;
+  }
+
+  return true;
+}
+
 export default function ExportReports() {
   const [reportType, setReportType] = useState("clubs");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [format, setFormat] = useState("csv");
+  const [isExporting, setIsExporting] = useState(false);
 
   const estimatedRows = useMemo(() => {
     const days = getDaysBetween(dateFrom, dateTo);
     return Math.max(1, days) * (BASE_MULTIPLIER[reportType] || 15);
   }, [dateFrom, dateTo, reportType]);
 
-  const handleExport = () => {
+  const handleExport = async () => {
     if (dateFrom && dateTo && new Date(dateFrom) > new Date(dateTo)) {
       toast.error("Invalid date range: Date From must be before or equal to Date To.");
       return;
@@ -47,7 +92,59 @@ export default function ExportReports() {
       return;
     }
 
-    toast.success(`${reportType} report exported as ${format.toUpperCase()} (${estimatedRows} rows)`);
+    if (format !== "csv") {
+      toast.error("PDF and Excel exports require the backend export endpoint.");
+      return;
+    }
+
+    if (!["clubs", "reports"].includes(reportType)) {
+      toast.error("This dataset requires a backend export endpoint before it can be downloaded.");
+      return;
+    }
+
+    setIsExporting(true);
+
+    try {
+      if (reportType === "clubs") {
+        const { data } = await getAdminClubs();
+        const headers = ["Club Name", "Category", "Status", "Followers", "Contact", "Approved At"];
+        const rows = (data.clubs ?? [])
+          .filter((club) => isWithinDateRange(club.approvedAt, dateFrom, dateTo))
+          .map((club) => ({
+            "Club Name": club.clubName,
+            Category: club.category,
+            Status: club.status,
+            Followers: club.followers,
+            Contact: club.email,
+            "Approved At": club.approvedAt ? new Date(club.approvedAt).toLocaleString() : "",
+          }));
+
+        downloadCsv(`kmultaqa-clubs-${new Date().toISOString().slice(0, 10)}.csv`, buildCsv(headers, rows));
+        toast.success(`Exported ${rows.length} clubs.`);
+        return;
+      }
+
+      const { data } = await getAdminReports({ status: "all" });
+      const headers = ["Target Type", "Target", "Reason", "Reporter", "Status", "Created At", "Admin Note"];
+      const rows = (data.reports ?? [])
+        .filter((report) => isWithinDateRange(report.createdAt, dateFrom, dateTo))
+        .map((report) => ({
+          "Target Type": report.targetModel,
+          Target: report.targetName,
+          Reason: report.reason,
+          Reporter: report.reporterName,
+          Status: report.status,
+          "Created At": report.createdAt ? new Date(report.createdAt).toLocaleString() : "",
+          "Admin Note": report.adminNote,
+        }));
+
+      downloadCsv(`kmultaqa-reports-${new Date().toISOString().slice(0, 10)}.csv`, buildCsv(headers, rows));
+      toast.success(`Exported ${rows.length} reports.`);
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "Could not export report."));
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const tooLarge = estimatedRows > SIZE_LIMIT;
@@ -118,9 +215,9 @@ export default function ExportReports() {
               </div>
 
               <div className="flex justify-end pt-2 border-t border-[var(--border)]">
-                <Button onClick={handleExport} size="lg">
+                <Button onClick={handleExport} size="lg" disabled={isExporting}>
                   <Download className="w-4 h-4" />
-                  Generate & Export Report
+                  {isExporting ? "Exporting..." : "Generate & Export Report"}
                 </Button>
               </div>
             </div>
