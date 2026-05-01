@@ -9,6 +9,7 @@ import Report from '../../../models/Report.js';
 import { env } from '../../config/env.js';
 import { requireAuth, requireRole } from '../../middlewares/auth.middleware.js';
 import {
+  sendAppealDecisionEmail,
   sendClubPasswordSetupEmail,
   sendClubRequestRejectionEmail,
   sendClubStatusEmail,
@@ -25,6 +26,7 @@ const appealsStore = [
     id: '1',
     type: 'club-rejection',
     submittedBy: 'AI & ML Club',
+    requesterEmail: 'aiml.club@kfupm.edu.sa',
     originalDecision: 'Club application rejected due to insufficient faculty advisor commitment and unclear activity plan.',
     evidence: 'Updated advisor confirmation and 6-month activity plan were submitted.',
     submittedAt: '2026-04-25T10:00:00.000Z',
@@ -35,6 +37,7 @@ const appealsStore = [
     id: '2',
     type: 'moderation-action',
     submittedBy: 'Photography Club',
+    requesterEmail: 'photography.club@kfupm.edu.sa',
     originalDecision: 'Club post hidden after student reports.',
     evidence: 'Club says the reported image was part of a supervised workshop announcement.',
     submittedAt: '2026-04-26T14:30:00.000Z',
@@ -219,6 +222,21 @@ function validateAppealIsActionable(appeal) {
 
   if (!appeal.originalDecision || !appeal.evidence) {
     throw createError(400, 'Appeal must reference an original decision and evidence');
+  }
+}
+
+async function notifyAppealRequester(appeal) {
+  try {
+    return await sendAppealDecisionEmail({
+      to: appeal.requesterEmail,
+      requesterName: appeal.submittedBy,
+      appealType: appeal.type,
+      decision: appeal.status,
+      explanation: appeal.explanation,
+    });
+  } catch (error) {
+    console.error('Failed to send appeal decision email', error);
+    return { sent: false, delivery: 'failed', recipient: appeal.requesterEmail ?? '' };
   }
 }
 
@@ -654,11 +672,14 @@ adminRouter.patch('/appeals/:appealId', requireAuth, requireRole('admin'), async
     appeal.reviewedAt = new Date().toISOString();
     appeal.reviewedBy = String(req.user._id);
 
+    const notificationDelivery = await notifyAppealRequester(appeal);
+
     console.log(`Admin ${req.user._id} reviewed appeal ${appeal.id}: ${decision}`);
 
     res.status(200).json({
       message: 'Appeal reviewed',
       appeal: serializeAppeal(appeal),
+      notificationDelivery,
     });
   } catch (error) {
     next(error);

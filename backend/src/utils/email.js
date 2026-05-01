@@ -292,3 +292,46 @@ export async function sendClubStatusEmail({ to, clubName, status, reason }) {
 
   return { sent: true, delivery: 'smtp', recipient };
 }
+
+export async function sendAppealDecisionEmail({ to, requesterName, appealType, decision, explanation }) {
+  const recipient = String(to ?? '').trim().toLowerCase();
+
+  if (!recipient) {
+    return { sent: false, delivery: 'none', recipient: '' };
+  }
+
+  const name = requesterName || 'there';
+
+  if (!env.smtp.enabled) {
+    console.log(`Appeal decision email for ${recipient}`);
+    console.log(`Appeal type: ${appealType}`);
+    console.log(`Decision: ${decision}`);
+    console.log(`Explanation: ${explanation}`);
+    return { sent: false, delivery: 'console', recipient };
+  }
+
+  await getTransporter().sendMail({
+    from: env.smtp.from,
+    to: recipient,
+    subject: 'KMultaqa appeal decision',
+    text: [
+      `Hello ${name},`,
+      '',
+      `Your ${appealType} appeal has been reviewed.`,
+      '',
+      `Decision: ${decision}`,
+      '',
+      'Explanation:',
+      explanation,
+    ].join('\n'),
+    html: `
+      <p>Hello ${escapeHtml(name)},</p>
+      <p>Your ${escapeHtml(appealType)} appeal has been reviewed.</p>
+      <p><strong>Decision:</strong> ${escapeHtml(decision)}</p>
+      <p><strong>Explanation:</strong></p>
+      <p>${escapeHtml(explanation)}</p>
+    `,
+  });
+
+  return { sent: true, delivery: 'smtp', recipient };
+}

@@ -9,7 +9,7 @@ Source checked against `phase3-REQ.pdf`.
   - [x] Add admin appeals list/detail endpoints.
   - [x] Support decisions: uphold, overturn, modify.
   - [x] Validate appeal time window, original decision reference, and attachments if used.
-  - [ ] Notify requester and log final outcome.
+  - [x] Notify requester and log final outcome.
 
 - [x] Expand reports moderation actions for FR-2 and FR-4.
   - [x] Support remove post.
