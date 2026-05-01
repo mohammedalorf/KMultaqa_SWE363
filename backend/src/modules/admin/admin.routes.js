@@ -12,6 +12,7 @@ import { createError } from '../../utils/jwt.js';
 import { createRandomToken, hashToken } from '../../utils/tokens.js';
 
 export const adminRouter = Router();
+const exportSizeLimit = 5000;
 
 function objectIdTimestamp(id) {
   return id?.getTimestamp?.() ?? new Date();
@@ -86,6 +87,85 @@ function serializeAnnouncement(announcement) {
 
 function normalizeAdminNote(value) {
   return typeof value === 'string' ? value.trim() : '';
+}
+
+function parseExportDate(value, fieldName, endOfDay = false) {
+  if (!value) {
+    return null;
+  }
+
+  const date = new Date(`${value}T${endOfDay ? '23:59:59.999' : '00:00:00.000'}`);
+
+  if (Number.isNaN(date.getTime())) {
+    throw createError(400, `${fieldName} must be a valid date`);
+  }
+
+  return date;
+}
+
+function getExportDateRange(query) {
+  const from = parseExportDate(query.from, 'Date from');
+  const to = parseExportDate(query.to, 'Date to', true);
+
+  if (from && to && from > to) {
+    throw createError(400, 'Date from must be before or equal to date to');
+  }
+
+  return { from, to };
+}
+
+function applyDateRangeFilter(filters, field, range) {
+  if (!range.from && !range.to) {
+    return filters;
+  }
+
+  filters[field] = {};
+
+  if (range.from) {
+    filters[field].$gte = range.from;
+  }
+
+  if (range.to) {
+    filters[field].$lte = range.to;
+  }
+
+  return filters;
+}
+
+function applyObjectIdDateRangeFilter(filters, range) {
+  if (!range.from && !range.to) {
+    return filters;
+  }
+
+  filters._id = {};
+
+  if (range.from) {
+    filters._id.$gte = mongoose.Types.ObjectId.createFromTime(Math.floor(range.from.getTime() / 1000));
+  }
+
+  if (range.to) {
+    filters._id.$lte = mongoose.Types.ObjectId.createFromTime(Math.floor(range.to.getTime() / 1000));
+  }
+
+  return filters;
+}
+
+function escapeCsv(value) {
+  const text = String(value ?? '');
+  return `"${text.replace(/"/g, '""')}"`;
+}
+
+function buildCsv(headers, rows) {
+  return [
+    headers.map(escapeCsv).join(','),
+    ...rows.map((row) => headers.map((header) => escapeCsv(row[header])).join(',')),
+  ].join('\n');
+}
+
+function sendCsv(res, filename, headers, rows) {
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+  res.status(200).send(buildCsv(headers, rows));
 }
 
 function getPasswordSetupExpiryDate() {
@@ -312,6 +392,121 @@ adminRouter.get('/reports', requireAuth, requireRole('admin'), async (req, res, 
     res.status(200).json({
       reports: reports.map(serializeReport),
     });
+  } catch (error) {
+    next(error);
+  }
+});
+
+adminRouter.get('/exports/:type', requireAuth, requireRole('admin'), async (req, res, next) => {
+  try {
+    const type = typeof req.params.type === 'string' ? req.params.type.trim().toLowerCase() : '';
+    const format = typeof req.query.format === 'string' ? req.query.format.trim().toLowerCase() : 'csv';
+    const range = getExportDateRange(req.query);
+
+    if (format !== 'csv') {
+      throw createError(400, 'Only CSV export is currently supported');
+    }
+
+    if (!['clubs', 'events', 'reports'].includes(type)) {
+      throw createError(400, 'Export type must be clubs, events, or reports');
+    }
+
+    if (type === 'clubs') {
+      const filters = applyDateRangeFilter({}, 'approvedAt', range);
+      const count = await Club.countDocuments(filters);
+
+      if (count > exportSizeLimit) {
+        throw createError(413, `Export contains ${count} rows. Narrow filters below ${exportSizeLimit} rows.`);
+      }
+
+      const clubs = await Club.find(filters)
+        .select('clubName email category status followers approvedAt suspensionReason')
+        .sort({ clubName: 1 })
+        .lean();
+      const headers = ['Club Name', 'Email', 'Category', 'Status', 'Followers', 'Approved At', 'Suspension Reason'];
+      const rows = clubs.map((club) => ({
+        'Club Name': club.clubName,
+        Email: club.email,
+        Category: club.category,
+        Status: club.status,
+        Followers: Array.isArray(club.followers) ? club.followers.length : 0,
+        'Approved At': club.approvedAt ? club.approvedAt.toISOString() : '',
+        'Suspension Reason': club.suspensionReason ?? '',
+      }));
+
+      console.log(`Admin ${req.user._id} exported clubs CSV (${rows.length} rows)`);
+      sendCsv(res, `kmultaqa-clubs-${new Date().toISOString().slice(0, 10)}.csv`, headers, rows);
+      return;
+    }
+
+    if (type === 'events') {
+      const filters = applyDateRangeFilter({}, 'startDateTime', range);
+      const count = await Event.countDocuments(filters);
+
+      if (count > exportSizeLimit) {
+        throw createError(413, `Export contains ${count} rows. Narrow filters below ${exportSizeLimit} rows.`);
+      }
+
+      const events = await Event.find(filters)
+        .populate('club', 'clubName')
+        .select('title category startDateTime endDateTime location capacity status club')
+        .sort({ startDateTime: 1 })
+        .lean();
+      const headers = ['Title', 'Club', 'Category', 'Start', 'End', 'Location', 'Capacity', 'Status'];
+      const rows = events.map((event) => ({
+        Title: event.title,
+        Club: event.club?.clubName ?? '',
+        Category: event.category,
+        Start: event.startDateTime ? event.startDateTime.toISOString() : '',
+        End: event.endDateTime ? event.endDateTime.toISOString() : '',
+        Location: event.location ?? '',
+        Capacity: event.capacity ?? '',
+        Status: event.status,
+      }));
+
+      console.log(`Admin ${req.user._id} exported events CSV (${rows.length} rows)`);
+      sendCsv(res, `kmultaqa-events-${new Date().toISOString().slice(0, 10)}.csv`, headers, rows);
+      return;
+    }
+
+    const status = typeof req.query.status === 'string' ? req.query.status.trim().toLowerCase() : 'all';
+    const filters = applyObjectIdDateRangeFilter({}, range);
+
+    if (status !== 'all') {
+      if (!['pending', 'resolved', 'dismissed'].includes(status)) {
+        throw createError(400, 'Report status filter is invalid');
+      }
+
+      filters.status = status;
+    }
+
+    const count = await Report.countDocuments(filters);
+
+    if (count > exportSizeLimit) {
+      throw createError(413, `Export contains ${count} rows. Narrow filters below ${exportSizeLimit} rows.`);
+    }
+
+    const reportsQuery = Report.find(filters)
+      .populate('reporter', 'fullName email')
+      .populate('target')
+      .sort({ _id: -1 });
+    const reports = await reportsQuery.lean();
+
+    const headers = ['Target Type', 'Target', 'Reason', 'Reporter', 'Reporter Email', 'Status', 'Created At', 'Reviewed At', 'Admin Note'];
+    const rows = reports.map((report) => ({
+      'Target Type': report.targetModel,
+      Target: getReportTargetName(report),
+      Reason: report.reason,
+      Reporter: report.reporter?.fullName ?? '',
+      'Reporter Email': report.reporter?.email ?? '',
+      Status: report.status,
+      'Created At': objectIdTimestamp(report._id).toISOString(),
+      'Reviewed At': report.reviewedAt ? report.reviewedAt.toISOString() : '',
+      'Admin Note': report.adminNote ?? '',
+    }));
+
+    console.log(`Admin ${req.user._id} exported reports CSV (${rows.length} rows)`);
+    sendCsv(res, `kmultaqa-reports-${new Date().toISOString().slice(0, 10)}.csv`, headers, rows);
   } catch (error) {
     next(error);
   }

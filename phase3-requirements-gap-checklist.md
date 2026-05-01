@@ -35,14 +35,14 @@ Source checked against `phase3-REQ.pdf`.
   - [ ] Notify clubs on status changes.
   - [ ] Add audit log for admin status changes.
 
-- [ ] Implement real admin export backend for FR-8.
-  - [ ] Add export endpoint.
-  - [ ] Support clubs/events/reports datasets.
-  - [ ] Validate date range and filters server-side.
-  - [ ] Enforce export size limits server-side.
-  - [ ] Generate CSV and/or PDF files.
-  - [ ] Provide download response/link.
-  - [ ] Log export activity.
+- [x] Implement real admin export backend for FR-8.
+  - [x] Add export endpoint.
+  - [x] Support clubs/events/reports datasets.
+  - [x] Validate date range and filters server-side.
+  - [x] Enforce export size limits server-side.
+  - [x] Generate CSV and/or PDF files.
+  - [x] Provide download response/link.
+  - [x] Log export activity.
 
 - [ ] Complete platform announcements backend for FR-6.
   - [ ] Support scheduled publish date.
