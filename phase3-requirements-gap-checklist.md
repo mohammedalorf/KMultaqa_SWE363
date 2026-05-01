@@ -85,11 +85,11 @@ Source checked against `phase3-REQ.pdf`.
   - [ ] Show transition guidance.
   - [ ] Support restrict/suspend duration if backend supports it.
 
-- [ ] Connect export UI to real backend for FR-8.
-  - [ ] Call export endpoint instead of only showing a toast.
-  - [ ] Download generated CSV/PDF.
-  - [ ] Show backend size-limit errors.
-  - [ ] Show export success/failure state.
+- [x] Connect export UI to real backend for FR-8.
+  - [x] Call export endpoint instead of only showing a toast.
+  - [x] Download generated CSV/PDF.
+  - [x] Show backend size-limit errors.
+  - [x] Show export success/failure state.
 
 - [ ] Complete announcement UI for FR-6.
   - [ ] Add preview action.
@@ -123,5 +123,5 @@ Source checked against `phase3-REQ.pdf`.
 
 - [x] Run backend syntax check: `npm.cmd --prefix backend run check`.
 - [ ] Reinstall frontend dependencies if needed.
-- [ ] Run frontend build: `npm.cmd run build`.
+- [x] Run frontend build: `npm.cmd run build`.
 - [ ] Smoke test admin, club, and student flows after changes.

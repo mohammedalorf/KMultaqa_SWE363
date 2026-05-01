@@ -32,6 +32,18 @@ export function updateAdminReport(reportId, payload) {
   return apiClient.patch(`/admin/reports/${reportId}`, payload);
 }
 
+export function exportAdminDataset(type, { dateFrom = "", dateTo = "", format = "csv", status = "all" } = {}) {
+  return apiClient.get(`/admin/exports/${type}`, {
+    params: {
+      from: dateFrom || undefined,
+      to: dateTo || undefined,
+      format,
+      status: type === "reports" ? status : undefined,
+    },
+    responseType: "blob",
+  });
+}
+
 export function getAdminAnnouncements() {
   return apiClient.get("/admin/announcements");
 }
