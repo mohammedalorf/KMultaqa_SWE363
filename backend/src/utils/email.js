@@ -335,3 +335,39 @@ export async function sendAppealDecisionEmail({ to, requesterName, appealType, d
 
   return { sent: true, delivery: 'smtp', recipient };
 }
+
+export async function sendPlatformAnnouncementEmail({ to, recipientName, title, message }) {
+  const recipient = String(to ?? '').trim().toLowerCase();
+
+  if (!recipient) {
+    return { sent: false, delivery: 'none', recipient: '' };
+  }
+
+  const name = recipientName || 'there';
+
+  if (!env.smtp.enabled) {
+    console.log(`Platform announcement email for ${recipient}`);
+    console.log(`Title: ${title}`);
+    return { sent: false, delivery: 'console', recipient };
+  }
+
+  await getTransporter().sendMail({
+    from: env.smtp.from,
+    to: recipient,
+    subject: title,
+    text: [
+      `Hello ${name},`,
+      '',
+      message,
+      '',
+      'This announcement was sent by KMultaqa administration.',
+    ].join('\n'),
+    html: `
+      <p>Hello ${escapeHtml(name)},</p>
+      <p>${escapeHtml(message)}</p>
+      <p>This announcement was sent by KMultaqa administration.</p>
+    `,
+  });
+
+  return { sent: true, delivery: 'smtp', recipient };
+}

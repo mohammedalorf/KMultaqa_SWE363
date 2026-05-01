@@ -6,6 +6,7 @@ import ClubRequest from '../../../models/ClubRequest.js';
 import Event from '../../../models/Event.js';
 import Post from '../../../models/Post.js';
 import Report from '../../../models/Report.js';
+import Student from '../../../models/Student.js';
 import { env } from '../../config/env.js';
 import { requireAuth, requireRole } from '../../middlewares/auth.middleware.js';
 import {
@@ -14,6 +15,7 @@ import {
   sendClubRequestRejectionEmail,
   sendClubStatusEmail,
   sendClubWarningEmail,
+  sendPlatformAnnouncementEmail,
 } from '../../utils/email.js';
 import { createError } from '../../utils/jwt.js';
 import { createRandomToken, hashToken } from '../../utils/tokens.js';
@@ -401,6 +403,68 @@ async function notifyClubStatusChange(club, status, reason) {
     console.error('Failed to send club status email', error);
     return { sent: false, delivery: 'failed', recipient: club.email };
   }
+}
+
+async function dispatchAnnouncementEmails({ title, message, audience }) {
+  const recipients = [];
+
+  if (audience === 'all' || audience === 'students') {
+    const students = await Student.find({
+      isVerified: true,
+      'notificationPreferences.email': { $ne: 'off' },
+    })
+      .select('fullName email')
+      .lean();
+
+    recipients.push(
+      ...students.map((student) => ({
+        email: student.email,
+        name: student.fullName,
+      }))
+    );
+  }
+
+  if (audience === 'all' || audience === 'clubs') {
+    const clubs = await Club.find({ status: 'active' })
+      .select('clubName email')
+      .lean();
+
+    recipients.push(
+      ...clubs.map((club) => ({
+        email: club.email,
+        name: club.clubName,
+      }))
+    );
+  }
+
+  const uniqueRecipients = [...new Map(recipients.map((recipient) => [recipient.email, recipient])).values()];
+  const deliveries = await Promise.allSettled(
+    uniqueRecipients.map((recipient) =>
+      sendPlatformAnnouncementEmail({
+        to: recipient.email,
+        recipientName: recipient.name,
+        title,
+        message,
+      })
+    )
+  );
+
+  const summary = deliveries.reduce(
+    (result, delivery) => {
+      if (delivery.status === 'fulfilled' && delivery.value.sent) {
+        result.sent += 1;
+        return result;
+      }
+
+      result.failed += 1;
+      return result;
+    },
+    { recipients: uniqueRecipients.length, sent: 0, failed: 0 }
+  );
+
+  console.log(`Announcement email dispatch for ${audience}: ${summary.sent}/${summary.recipients} sent`);
+
+  return summary;
 }
 
 async function approveClubRequest(request, adminNote) {
@@ -907,6 +971,7 @@ adminRouter.post('/announcements', requireAuth, requireRole('admin'), async (req
     const title = typeof req.body?.title === 'string' ? req.body.title.trim() : '';
     const message = typeof req.body?.message === 'string' ? req.body.message.trim() : '';
     const audience = typeof req.body?.audience === 'string' ? req.body.audience.trim() : 'all';
+    const notifyAudience = req.body?.notifyAudience === true;
 
     if (title.length < 8 || title.length > 120) {
       throw createError(400, 'Title must be between 8 and 120 characters');
@@ -927,9 +992,14 @@ adminRouter.post('/announcements', requireAuth, requireRole('admin'), async (req
       status: 'active',
     });
 
+    const notificationDelivery = notifyAudience
+      ? await dispatchAnnouncementEmails({ title, message, audience })
+      : { recipients: 0, sent: 0, failed: 0 };
+
     res.status(201).json({
       message: 'Announcement published',
       announcement: serializeAnnouncement(announcement),
+      notificationDelivery,
     });
   } catch (error) {
     next(error);

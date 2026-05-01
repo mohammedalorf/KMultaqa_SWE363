@@ -48,7 +48,7 @@ Source checked against `phase3-REQ.pdf`.
   - [ ] Support scheduled publish date.
   - [ ] Validate scheduled publish time is in the future.
   - [ ] Track announcement edits.
-  - [ ] Dispatch optional notifications to selected audience.
+  - [x] Dispatch optional notifications to selected audience.
 
 - [x] Complete follower email notification delivery for FR-16 and FR-18.
   - [x] Send emails for new posts/events when follower preference allows it.
