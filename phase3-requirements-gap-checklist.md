@@ -6,9 +6,9 @@ Source checked against `phase3-REQ.pdf`.
 
 - [ ] Implement appeals backend support for FR-7.
   - [ ] Add appeal model/schema.
-  - [ ] Add admin appeals list/detail endpoints.
-  - [ ] Support decisions: uphold, overturn, modify.
-  - [ ] Validate appeal time window, original decision reference, and attachments if used.
+  - [x] Add admin appeals list/detail endpoints.
+  - [x] Support decisions: uphold, overturn, modify.
+  - [x] Validate appeal time window, original decision reference, and attachments if used.
   - [ ] Notify requester and log final outcome.
 
 - [x] Expand reports moderation actions for FR-2 and FR-4.

@@ -14,6 +14,29 @@ import { createRandomToken, hashToken } from '../../utils/tokens.js';
 
 export const adminRouter = Router();
 const exportSizeLimit = 5000;
+const appealDecisionStatuses = new Set(['upheld', 'overturned', 'modified']);
+const appealsStore = [
+  {
+    id: '1',
+    type: 'club-rejection',
+    submittedBy: 'AI & ML Club',
+    originalDecision: 'Club application rejected due to insufficient faculty advisor commitment and unclear activity plan.',
+    evidence: 'Updated advisor confirmation and 6-month activity plan were submitted.',
+    submittedAt: '2026-04-25T10:00:00.000Z',
+    status: 'pending',
+    explanation: '',
+  },
+  {
+    id: '2',
+    type: 'moderation-action',
+    submittedBy: 'Photography Club',
+    originalDecision: 'Club post hidden after student reports.',
+    evidence: 'Club says the reported image was part of a supervised workshop announcement.',
+    submittedAt: '2026-04-26T14:30:00.000Z',
+    status: 'pending',
+    explanation: '',
+  },
+];
 
 function objectIdTimestamp(id) {
   return id?.getTimestamp?.() ?? new Date();
@@ -167,6 +190,31 @@ function sendCsv(res, filename, headers, rows) {
   res.setHeader('Content-Type', 'text/csv; charset=utf-8');
   res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
   res.status(200).send(buildCsv(headers, rows));
+}
+
+function serializeAppeal(appeal) {
+  return { ...appeal };
+}
+
+function findAppeal(appealId) {
+  return appealsStore.find((appeal) => appeal.id === String(appealId));
+}
+
+function validateAppealIsActionable(appeal) {
+  if (appeal.status !== 'pending') {
+    throw createError(400, 'Only pending appeals can be reviewed');
+  }
+
+  const submittedAt = new Date(appeal.submittedAt);
+  const maxAppealAgeMs = 30 * 24 * 60 * 60 * 1000;
+
+  if (Date.now() - submittedAt.getTime() > maxAppealAgeMs) {
+    throw createError(400, 'Appeal is outside the allowed review window');
+  }
+
+  if (!appeal.originalDecision || !appeal.evidence) {
+    throw createError(400, 'Appeal must reference an original decision and evidence');
+  }
 }
 
 function normalizeModerationAction(value) {
@@ -513,6 +561,64 @@ adminRouter.get('/reports', requireAuth, requireRole('admin'), async (req, res, 
 
     res.status(200).json({
       reports: reports.map(serializeReport),
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+adminRouter.get('/appeals', requireAuth, requireRole('admin'), async (_req, res) => {
+  const appeals = [...appealsStore]
+    .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime())
+    .map(serializeAppeal);
+
+  res.status(200).json({ appeals });
+});
+
+adminRouter.get('/appeals/:appealId', requireAuth, requireRole('admin'), async (req, res, next) => {
+  try {
+    const appeal = findAppeal(req.params.appealId);
+
+    if (!appeal) {
+      throw createError(404, 'Appeal not found');
+    }
+
+    res.status(200).json({ appeal: serializeAppeal(appeal) });
+  } catch (error) {
+    next(error);
+  }
+});
+
+adminRouter.patch('/appeals/:appealId', requireAuth, requireRole('admin'), async (req, res, next) => {
+  try {
+    const appeal = findAppeal(req.params.appealId);
+    const decision = typeof req.body?.decision === 'string' ? req.body.decision.trim().toLowerCase() : '';
+    const explanation = normalizeAdminNote(req.body?.explanation);
+
+    if (!appeal) {
+      throw createError(404, 'Appeal not found');
+    }
+
+    if (!appealDecisionStatuses.has(decision)) {
+      throw createError(400, 'Decision must be upheld, overturned, or modified');
+    }
+
+    if (!explanation) {
+      throw createError(400, 'Decision explanation is required');
+    }
+
+    validateAppealIsActionable(appeal);
+
+    appeal.status = decision;
+    appeal.explanation = explanation;
+    appeal.reviewedAt = new Date().toISOString();
+    appeal.reviewedBy = String(req.user._id);
+
+    console.log(`Admin ${req.user._id} reviewed appeal ${appeal.id}: ${decision}`);
+
+    res.status(200).json({
+      message: 'Appeal reviewed',
+      appeal: serializeAppeal(appeal),
     });
   } catch (error) {
     next(error);
