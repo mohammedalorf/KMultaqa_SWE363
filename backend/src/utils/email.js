@@ -158,3 +158,45 @@ export async function sendClubRequestRejectionEmail({ to, clubName, representati
 
   return { sent: true, delivery: 'smtp', recipients };
 }
+
+export async function sendFollowerContentEmail({ to, studentName, clubName, contentType, title, targetUrl }) {
+  const recipient = String(to ?? '').trim().toLowerCase();
+
+  if (!recipient) {
+    return { sent: false, delivery: 'none', recipient: '' };
+  }
+
+  if (!env.smtp.enabled) {
+    console.log(`Follower ${contentType} notification for ${recipient}`);
+    console.log(`Club: ${clubName}`);
+    console.log(`Title: ${title}`);
+    console.log(`Link: ${targetUrl}`);
+    return { sent: false, delivery: 'console', recipient };
+  }
+
+  await getTransporter().sendMail({
+    from: env.smtp.from,
+    to: recipient,
+    subject: `New ${contentType} from ${clubName}`,
+    text: [
+      `Hello ${studentName || 'there'},`,
+      '',
+      `${clubName} published a new ${contentType}:`,
+      title,
+      '',
+      'Open it here:',
+      targetUrl,
+      '',
+      'You are receiving this because your KMultaqa email notifications are enabled.',
+    ].join('\n'),
+    html: `
+      <p>Hello ${escapeHtml(studentName || 'there')},</p>
+      <p><strong>${escapeHtml(clubName)}</strong> published a new ${escapeHtml(contentType)}:</p>
+      <p>${escapeHtml(title)}</p>
+      <p><a href="${escapeHtml(targetUrl)}">${escapeHtml(targetUrl)}</a></p>
+      <p>You are receiving this because your KMultaqa email notifications are enabled.</p>
+    `,
+  });
+
+  return { sent: true, delivery: 'smtp', recipient };
+}

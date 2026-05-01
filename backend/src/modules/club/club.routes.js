@@ -656,6 +656,10 @@ clubRouter.post('/posts', requireAuth, requireRole('club'), async (req, res, nex
 
     res.status(201).json({
       message: 'Post published',
+      notificationDispatch: {
+        inApp: 'queued',
+        email: 'queued',
+      },
       post: {
         id: String(post._id),
         title: post.title,
@@ -789,6 +793,10 @@ clubRouter.post('/events', requireAuth, requireRole('club'), async (req, res, ne
 
     res.status(201).json({
       message: 'Event published',
+      notificationDispatch: {
+        inApp: 'queued',
+        email: 'queued',
+      },
       event: {
         id: String(event._id),
         title: event.title,

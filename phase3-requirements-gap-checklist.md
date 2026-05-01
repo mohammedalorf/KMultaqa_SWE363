@@ -50,11 +50,11 @@ Source checked against `phase3-REQ.pdf`.
   - [ ] Track announcement edits.
   - [ ] Dispatch optional notifications to selected audience.
 
-- [ ] Complete follower email notification delivery for FR-16 and FR-18.
-  - [ ] Send emails for new posts/events when follower preference allows it.
-  - [ ] Enforce verified university email requirement.
-  - [ ] Store delivery status/logs.
-  - [ ] Return publish notification summary to club publishing endpoints.
+- [x] Complete follower email notification delivery for FR-16 and FR-18.
+  - [x] Send emails for new posts/events when follower preference allows it.
+  - [x] Enforce verified university email requirement.
+  - [x] Store delivery status/logs.
+  - [x] Return publish notification summary to club publishing endpoints.
 
 - [x] Strengthen event registration validation for FR-21.
   - [x] Validate student ID format when a registration field asks for student ID.

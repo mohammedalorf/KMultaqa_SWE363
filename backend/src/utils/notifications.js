@@ -1,6 +1,8 @@
 import Club from '../../models/Club.js';
 import Notification from '../../models/Notification.js';
 import Student from '../../models/Student.js';
+import { env } from '../config/env.js';
+import { sendFollowerContentEmail } from './email.js';
 
 function buildNotificationMessage(type, clubName) {
   if (type === 'event') {
@@ -26,28 +28,60 @@ function studentAllowsInAppNotification(student, clubId) {
   return preference?.inApp !== false && preference?.notificationsEnabled !== false;
 }
 
+function studentAllowsEmailNotification(student, clubId) {
+  if (!student.isVerified || student.notificationPreferences?.email === 'off') {
+    return false;
+  }
+
+  const preference = student.notificationPreferences?.clubs?.find((item) => {
+    return String(item.club) === String(clubId);
+  });
+
+  return preference?.email !== false;
+}
+
+function buildTargetUrl(targetModel, targetId) {
+  if (targetModel === 'Event') {
+    return `${env.frontendBaseUrl}/student/event/${targetId}`;
+  }
+
+  return `${env.frontendBaseUrl}/student/dashboard`;
+}
+
+function summarizeEmailResults(results) {
+  return results.reduce(
+    (summary, result) => {
+      if (result.status === 'fulfilled' && ['smtp', 'console'].includes(result.value?.delivery)) {
+        summary.sent += 1;
+      } else {
+        summary.failed += 1;
+      }
+
+      return summary;
+    },
+    { sent: 0, failed: 0 }
+  );
+}
+
 export async function notifyFollowersAboutClubContent({ clubId, targetId, targetModel, type }) {
   if (!clubId || !targetId || !targetModel || !type) {
-    return { created: 0 };
+    return { created: 0, email: { sent: 0, failed: 0 } };
   }
 
   const club = await Club.findById(clubId).select('clubName').lean();
 
   if (!club) {
-    return { created: 0 };
+    return { created: 0, email: { sent: 0, failed: 0 } };
   }
 
-  const followers = (await Student.find({ followedClubs: club._id })
-    .select('_id notificationPreferences.clubs')
-    .lean())
-    .filter((student) => studentAllowsInAppNotification(student, club._id));
-
-  if (followers.length === 0) {
-    return { created: 0 };
-  }
+  const followers = await Student.find({ followedClubs: club._id })
+    .select('_id fullName email isVerified notificationPreferences')
+    .lean();
+  const inAppFollowers = followers.filter((student) => studentAllowsInAppNotification(student, club._id));
+  const emailFollowers = followers.filter((student) => studentAllowsEmailNotification(student, club._id));
 
   const message = buildNotificationMessage(type, club.clubName);
-  const notifications = followers.map((student) => ({
+  const notifications = inAppFollowers.map((student) => ({
     student: student._id,
     club: club._id,
     target: targetId,
@@ -55,13 +89,35 @@ export async function notifyFollowersAboutClubContent({ clubId, targetId, target
     type,
     message,
   }));
+  const targetUrl = buildTargetUrl(targetModel, targetId);
+  const emailResults = await Promise.allSettled(
+    emailFollowers.map((student) =>
+      sendFollowerContentEmail({
+        to: student.email,
+        studentName: student.fullName,
+        clubName: club.clubName,
+        contentType: type,
+        title: message,
+        targetUrl,
+      })
+    )
+  );
+  const email = summarizeEmailResults(emailResults);
+
+  if (emailFollowers.length > 0) {
+    console.log(`Follower email notification status for ${targetModel} ${targetId}: ${email.sent} sent, ${email.failed} failed`);
+  }
+
+  if (notifications.length === 0) {
+    return { created: 0, email };
+  }
 
   try {
     const insertedNotifications = await Notification.insertMany(notifications, { ordered: false });
-    return { created: insertedNotifications.length };
+    return { created: insertedNotifications.length, email };
   } catch (error) {
     if (isDuplicateOnlyInsertError(error)) {
-      return { created: error?.insertedDocs?.length ?? 0 };
+      return { created: error?.insertedDocs?.length ?? 0, email };
     }
 
     throw error;
