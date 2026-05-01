@@ -407,12 +407,7 @@ export default function ClubProfileView() {
         </div>
 
         <div className="flex flex-col gap-4 pt-16 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <div className="mb-2 flex flex-wrap items-center gap-2">
-              <Badge variant="outline" className="capitalize" style={{ borderColor: accentColor }}>{club.category}</Badge>
-              <Badge variant="success">{club.status}</Badge>
-            </div>
-          </div>
+          <h2 className="ml-6 text-3xl font-semibold" style={{ color: primaryTextColor }}>{club.clubName}</h2>
 
           <div className="flex items-center gap-2">
             <Button
@@ -504,7 +499,7 @@ export default function ClubProfileView() {
         />
       </section>
 
-      <div ref={tabsRef} className="mb-6 border-b border-[var(--border)] scroll-mt-20">
+      <div ref={tabsRef} className="mb-6 scroll-mt-20">
         <div className="flex gap-6">
           {tabItems.map((tab) => {
             const isActive = activeTab === tab;
@@ -546,9 +541,9 @@ export default function ClubProfileView() {
               >
                 <div className="flex items-start gap-3">
                   <ClubAvatar logoUrl={club.logoUrl} name={club.clubName} logoShape={club.logoShape} />
-                  <div className="min-w-0 flex-1">
+                  <div className="min-w-0 flex-1 pt-2">
                     <div className="mb-2 flex items-center gap-2">
-                      <span className="font-semibold">{club.clubName}</span>
+                      <span className="text-xl font-semibold" style={{ color: primaryTextColor }}>{club.clubName}</span>
                       {post.isPinned && (
                         <Badge variant="outline" className="text-xs" style={{ borderColor: accentColor, color: accentColor }}>
                           <Pin className="h-3 w-3" />
@@ -556,7 +551,7 @@ export default function ClubProfileView() {
                         </Badge>
                       )}
                     </div>
-                    <h3 className="mb-2 text-xl font-semibold">{post.title}</h3>
+                    <h3 className="mb-2 text-base font-semibold" style={{ color: primaryTextColor }}>{post.title}</h3>
                     <p className="mb-3 text-[var(--profile-secondary-text)]">{post.content}</p>
                     {post.imageUrl && (
                       <img src={post.imageUrl} alt="" className="mb-4 max-h-80 w-full rounded-lg object-cover" />
@@ -568,7 +563,7 @@ export default function ClubProfileView() {
                         size="sm"
                         onClick={() => handleTogglePostLike(post)}
                         disabled={likingPostIds.includes(post.id)}
-                        style={post.isLiked ? { color: accentColor } : undefined}
+                        style={{ color: accentColor }}
                         aria-label={post.isLiked ? "Unlike post" : "Like post"}
                       >
                         <Heart className={`h-4 w-4 ${post.isLiked ? "fill-current" : ""}`} />
@@ -600,7 +595,7 @@ export default function ClubProfileView() {
                   <Card className="overflow-hidden transition-colors hover:bg-[var(--accent)]" style={{ backgroundColor: cardColor, borderColor: "transparent", color: primaryTextColor }}>
                     {event.imageUrl && <img src={event.imageUrl} alt="" className="h-40 w-full object-cover" />}
                     <div className="p-6">
-                      <h3 className="mb-2 text-lg font-semibold">{event.title}</h3>
+                      <h3 className="mb-2 text-lg font-semibold" style={{ color: primaryTextColor }}>{event.title}</h3>
                       <p className="mb-4 text-sm text-[var(--profile-secondary-text)]">{event.content}</p>
                       <div className="space-y-2 text-sm">
                         <div className="flex items-center gap-2">
@@ -609,7 +604,7 @@ export default function ClubProfileView() {
                         </div>
                         <div className="flex items-center gap-2">
                           <Clock className="h-4 w-4 text-[var(--profile-secondary-text)]" />
-                          <span>{formatTime(event.startDateTime)}</span>
+                          <span>{event.hasStartTime === false ? "Time TBA" : formatTime(event.startDateTime)}</span>
                         </div>
                         <div className="flex items-center gap-2">
                           <MapPin className="h-4 w-4 text-[var(--profile-secondary-text)]" />
@@ -630,7 +625,7 @@ export default function ClubProfileView() {
 
       {activeTab === "about" && (
         <Card className="p-6" style={{ backgroundColor: cardColor, borderColor: "transparent", color: primaryTextColor }}>
-          <h2 className="mb-5 text-xl font-semibold">About {club.clubName}</h2>
+          <h2 className="mb-5 text-xl font-semibold" style={{ color: primaryTextColor }}>About</h2>
           <div className="space-y-5">
             <AboutRow label="Category">
               <span className="capitalize">{club.category}</span>

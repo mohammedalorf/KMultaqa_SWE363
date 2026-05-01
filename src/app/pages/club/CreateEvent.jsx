@@ -14,7 +14,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { createClubEvent } from "../../api/clubApi";
 import { getApiErrorMessage } from "../../api/apiClient";
-import { ImageUploadField } from "../../components/ImageUploadField";
+import { ImageUploadField, contentImageAspectRatioOptions } from "../../components/ImageUploadField";
 
 const categories = [
   { value: "academic", label: "Academic" },
@@ -26,6 +26,10 @@ const categories = [
   { value: "other", label: "Other" },
 ];
 const optionFieldTypes = new Set(["checkbox", "radio"]);
+
+function buildEventDateTime(dateValue, timeValue, fallbackTime) {
+  return new Date(`${dateValue}T${timeValue ? `${timeValue}:00` : fallbackTime}`);
+}
 
 export default function CreateEvent() {
   const navigate = useNavigate();
@@ -128,8 +132,8 @@ export default function CreateEvent() {
   };
 
   const handlePublish = async () => {
-    if (!title.trim() || !description.trim() || !date || !time || !endTime) {
-      toast.error("Title, description, start time, and end time are required.");
+    if (!title.trim() || !description.trim() || !date) {
+      toast.error("Title, description, and date are required.");
       return;
     }
 
@@ -150,8 +154,8 @@ export default function CreateEvent() {
 
     if (!validateRegistrationFields()) return;
 
-    const startDateTime = new Date(`${date}T${time}:00`);
-    const endDateTime = new Date(`${date}T${endTime}:00`);
+    const startDateTime = buildEventDateTime(date, time, "00:00:00");
+    const endDateTime = buildEventDateTime(date, endTime, "23:59:59");
 
     if (endDateTime <= startDateTime) {
       toast.error("End time must be after start time.");
@@ -176,6 +180,8 @@ export default function CreateEvent() {
         category,
         startDateTime: startDateTime.toISOString(),
         endDateTime: endDateTime.toISOString(),
+        hasStartTime: Boolean(time),
+        hasEndTime: Boolean(endTime),
         location: finalLocation,
         capacity,
         imageUrl,
@@ -235,11 +241,11 @@ export default function CreateEvent() {
                 <Input id="date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
               </div>
               <div>
-                <Label htmlFor="time">Time</Label>
+                <Label htmlFor="time">Start Time (optional)</Label>
                 <Input id="time" type="time" value={time} onChange={(e) => setTime(e.target.value)} />
               </div>
               <div>
-                <Label htmlFor="endTime">End Time</Label>
+                <Label htmlFor="endTime">End Time (optional)</Label>
                 <Input id="endTime" type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
               </div>
             </div>
@@ -283,6 +289,7 @@ export default function CreateEvent() {
                   folder="events"
                   disabled={isPublishing}
                   aspectRatio={16 / 9}
+                  aspectRatioOptions={contentImageAspectRatioOptions}
                 />
               </div>
             </div>

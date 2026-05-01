@@ -13,11 +13,37 @@ const maxImageBytes = 5 * 1024 * 1024;
 const maxZoom = 3;
 const minZoom = 1;
 
+export const contentImageAspectRatioOptions = [
+  { label: "Landscape", ratio: 16 / 9, description: "16:9" },
+  { label: "Square", ratio: 1, description: "1:1" },
+  { label: "Portrait", ratio: 4 / 5, description: "4:5" },
+  { label: "Vertical", ratio: 9 / 16, description: "9:16" },
+];
+
 function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max);
 }
 
-function getCroppedImageFile(image, frame, offset, zoom, aspectRatio, sourceFile) {
+function getDefaultOutputWidth(aspectRatio) {
+  if (aspectRatio >= 2.5) return 1600;
+  if (aspectRatio >= 1.5) return 1280;
+  if (aspectRatio === 1) return 1080;
+  if (aspectRatio < 1) return 1080;
+  return 1280;
+}
+
+function getClosestAspectRatioOption(aspectRatio, options) {
+  if (!options.length) return null;
+
+  return options.reduce((closest, option) => {
+    const currentDifference = Math.abs(Math.log(option.ratio / aspectRatio));
+    const closestDifference = Math.abs(Math.log(closest.ratio / aspectRatio));
+
+    return currentDifference < closestDifference ? option : closest;
+  }, options[0]);
+}
+
+function getCroppedImageFile(image, frame, offset, zoom, aspectRatio, sourceFile, outputWidth) {
   const naturalWidth = image.naturalWidth;
   const naturalHeight = image.naturalHeight;
   const frameWidth = frame.clientWidth;
@@ -37,7 +63,6 @@ function getCroppedImageFile(image, frame, offset, zoom, aspectRatio, sourceFile
   const sourceY = clamp((-imageTop / scaledHeight) * naturalHeight, 0, naturalHeight);
   const sourceWidth = clamp((frameWidth / scaledWidth) * naturalWidth, 1, naturalWidth - sourceX);
   const sourceHeight = clamp((frameHeight / scaledHeight) * naturalHeight, 1, naturalHeight - sourceY);
-  const outputWidth = aspectRatio >= 2.5 ? 1600 : aspectRatio === 1 ? 800 : 1280;
   const outputHeight = Math.round(outputWidth / aspectRatio);
   const canvas = document.createElement("canvas");
   const context = canvas.getContext("2d");
@@ -95,16 +120,29 @@ export function ImageUploadField({
   disabled = false,
   previewClassName = "h-40",
   aspectRatio = 16 / 9,
+  aspectRatioOptions = [],
 }) {
+  const availableAspectRatioOptions = Array.isArray(aspectRatioOptions)
+    ? aspectRatioOptions.filter((option) => Number.isFinite(option.ratio) && option.ratio > 0)
+    : [];
   const [isUploading, setIsUploading] = useState(false);
   const [cropSource, setCropSource] = useState("");
   const [selectedFile, setSelectedFile] = useState(null);
+  const [selectedAspectRatio, setSelectedAspectRatio] = useState(
+    availableAspectRatioOptions[0]?.ratio ?? aspectRatio
+  );
   const [naturalSize, setNaturalSize] = useState({ width: 0, height: 0 });
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const imageRef = useRef(null);
   const frameRef = useRef(null);
   const dragRef = useRef(null);
+  const activeAspectRatio = availableAspectRatioOptions.some(
+    (option) => option.ratio === selectedAspectRatio
+  )
+    ? selectedAspectRatio
+    : aspectRatio;
+  const outputWidth = getDefaultOutputWidth(activeAspectRatio);
 
   useEffect(() => {
     return () => {
@@ -124,11 +162,10 @@ export function ImageUploadField({
     const frameWidth = frame.clientWidth;
     const frameHeight = frame.clientHeight;
     const imageAspectRatio = naturalSize.width / naturalSize.height;
-    const frameAspectRatio = frameWidth / frameHeight;
     const baseWidth =
-      imageAspectRatio > frameAspectRatio ? frameHeight * imageAspectRatio : frameWidth;
+      imageAspectRatio > activeAspectRatio ? frameHeight * imageAspectRatio : frameWidth;
     const baseHeight =
-      imageAspectRatio > frameAspectRatio ? frameHeight : frameWidth / imageAspectRatio;
+      imageAspectRatio > activeAspectRatio ? frameHeight : frameWidth / imageAspectRatio;
     const maxX = Math.max(0, (baseWidth * nextZoom - frameWidth) / 2);
     const maxY = Math.max(0, (baseHeight * nextZoom - frameHeight) / 2);
 
@@ -171,11 +208,27 @@ export function ImageUploadField({
   };
 
   const handleImageLoad = (event) => {
-    setNaturalSize({
+    const nextNaturalSize = {
       width: event.currentTarget.naturalWidth,
       height: event.currentTarget.naturalHeight,
+    };
+
+    setNaturalSize({
+      width: nextNaturalSize.width,
+      height: nextNaturalSize.height,
     });
+
+    if (availableAspectRatioOptions.length > 0 && nextNaturalSize.width && nextNaturalSize.height) {
+      const imageAspectRatio = nextNaturalSize.width / nextNaturalSize.height;
+      const closestOption = getClosestAspectRatioOption(imageAspectRatio, availableAspectRatioOptions);
+
+      if (closestOption) {
+        setSelectedAspectRatio(closestOption.ratio);
+      }
+    }
+
     setOffset({ x: 0, y: 0 });
+    setZoom(1);
   };
 
   const handlePointerDown = (event) => {
@@ -213,6 +266,12 @@ export function ImageUploadField({
     setOffset((current) => clampOffset(current, nextZoom));
   };
 
+  const handleAspectRatioChange = (nextAspectRatio) => {
+    setSelectedAspectRatio(nextAspectRatio);
+    setOffset({ x: 0, y: 0 });
+    setZoom(1);
+  };
+
   const handleCropAndUpload = async () => {
     if (!selectedFile || !imageRef.current || !frameRef.current) {
       return;
@@ -226,8 +285,9 @@ export function ImageUploadField({
         frameRef.current,
         offset,
         zoom,
-        aspectRatio,
-        selectedFile
+        activeAspectRatio,
+        selectedFile,
+        outputWidth
       );
       const { data } = await uploadImage(croppedFile, folder);
       onChange(data.imageUrl ?? "");
@@ -299,7 +359,7 @@ export function ImageUploadField({
           <div
             ref={frameRef}
             className="relative w-full touch-none cursor-grab overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--accent)] active:cursor-grabbing"
-            style={{ aspectRatio: String(aspectRatio) }}
+            style={{ aspectRatio: String(activeAspectRatio) }}
             onPointerDown={handlePointerDown}
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerUp}
@@ -315,11 +375,11 @@ export function ImageUploadField({
                 onLoad={handleImageLoad}
                 style={{
                   width:
-                    naturalSize.width && naturalSize.width / naturalSize.height > aspectRatio
+                    naturalSize.width && naturalSize.width / naturalSize.height > activeAspectRatio
                       ? "auto"
                       : "100%",
                   height:
-                    naturalSize.width && naturalSize.width / naturalSize.height > aspectRatio
+                    naturalSize.width && naturalSize.width / naturalSize.height > activeAspectRatio
                       ? "100%"
                       : "auto",
                   transform: `translate(calc(-50% + ${offset.x}px), calc(-50% + ${offset.y}px)) scale(${zoom})`,
@@ -328,6 +388,35 @@ export function ImageUploadField({
               />
             )}
           </div>
+
+          {availableAspectRatioOptions.length > 0 && (
+            <div className="space-y-2">
+              <Label>Image Ratio</Label>
+              <div className="grid gap-2 sm:grid-cols-4">
+                {availableAspectRatioOptions.map((option) => {
+                  const optionWidth = getDefaultOutputWidth(option.ratio);
+                  const optionHeight = Math.round(optionWidth / option.ratio);
+                  const isSelected = option.ratio === activeAspectRatio;
+
+                  return (
+                    <Button
+                      key={`${option.label}-${option.ratio}`}
+                      type="button"
+                      variant={isSelected ? "default" : "outline"}
+                      className="h-auto flex-col items-start gap-0 py-2"
+                      onClick={() => handleAspectRatioChange(option.ratio)}
+                      disabled={isUploading}
+                    >
+                      <span>{option.label}</span>
+                      <span className={isSelected ? "text-xs opacity-80" : "text-xs text-[var(--muted-foreground)]"}>
+                        {option.description ?? `${optionWidth} x ${optionHeight}`}
+                      </span>
+                    </Button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor={`${id}-zoom`}>Zoom</Label>

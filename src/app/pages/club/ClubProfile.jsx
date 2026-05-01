@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Camera, Calendar, Edit3, FileText, Users } from "lucide-react";
+import { BellOff, Calendar, Clock, Edit3, FileText, Flag, Heart, MapPin, Pin, Users } from "lucide-react";
+import { EmptyState } from "../../components/layout/EmptyState";
 import { PageContainer } from "../../components/layout/PageContainer";
 import { PageHeader } from "../../components/layout/PageHeader";
 import { Card } from "../../components/ui/card";
+import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Textarea } from "../../components/ui/textarea";
@@ -11,7 +13,7 @@ import { Label } from "../../components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "../../components/ui/dialog";
 import { getApiErrorMessage } from "../../api/apiClient";
-import { getClubDashboard, getClubProfile, updateClubProfile } from "../../api/clubApi";
+import { getClubDashboard, getClubEvents, getClubPosts, getClubProfile, updateClubProfile } from "../../api/clubApi";
 import { ImageUploadField } from "../../components/ImageUploadField";
 
 const categories = [
@@ -29,6 +31,7 @@ const defaultBackgroundColor = "#f8fafc";
 const defaultCardColor = "#ffffff";
 const defaultPrimaryTextColor = "#111827";
 const defaultSecondaryTextColor = "#6b7280";
+const tabItems = ["posts", "events", "about"];
 
 const emptyForm = {
   clubName: "",
@@ -37,6 +40,7 @@ const emptyForm = {
   email: "",
   logoUrl: "",
   bannerUrl: "",
+  status: "active",
   accentColor: defaultAccentColor,
   backgroundColor: defaultBackgroundColor,
   cardColor: defaultCardColor,
@@ -94,6 +98,7 @@ function buildForm(club) {
     email: club?.email ?? "",
     logoUrl: club?.logoUrl ?? "",
     bannerUrl: club?.bannerUrl ?? "",
+    status: club?.status ?? "active",
     accentColor: getAccentColor(club?.accentColor ?? club?.themeColor),
     backgroundColor: getBackgroundColor(club?.backgroundColor),
     cardColor: getCardColor(club?.cardColor),
@@ -110,9 +115,34 @@ function buildForm(club) {
   };
 }
 
+function ClubAvatar({ logoUrl, name, logoShape = "circle", hero = false }) {
+  const sizeClass = hero ? "h-[100px] w-[100px] text-4xl" : "h-12 w-12 text-base";
+  const borderClass = hero ? "border-4 border-white shadow-[var(--shadow-md)]" : "";
+  const shapeClass = getLogoShapeClass(logoShape);
+
+  if (logoUrl) {
+    return (
+      <img
+        src={logoUrl}
+        alt={name}
+        className={`${sizeClass} ${borderClass} ${shapeClass} bg-[var(--card)] object-cover shrink-0`}
+      />
+    );
+  }
+
+  return (
+    <div className={`${sizeClass} ${borderClass} ${shapeClass} bg-[var(--card)] text-[var(--primary)] flex items-center justify-center font-semibold shrink-0`}>
+      {name?.charAt(0)?.toUpperCase() || "C"}
+    </div>
+  );
+}
+
 function ProfileStat({ icon, value, label, accentColor, cardColor }) {
   return (
-    <Card className="p-6" style={{ backgroundColor: cardColor, borderColor: "transparent", color: "var(--profile-primary-text)" }}>
+    <div
+      className="w-full rounded-xl border border-[var(--border)] bg-[var(--card)] p-6 text-left text-[var(--card-foreground)] shadow-[var(--shadow-sm)] transition-colors hover:bg-[var(--accent)]/35"
+      style={{ backgroundColor: cardColor, borderColor: "transparent", color: "var(--profile-primary-text)" }}
+    >
       <div className="flex items-center justify-between gap-4">
         <div>
           <div className="text-2xl font-semibold">{value}</div>
@@ -125,11 +155,11 @@ function ProfileStat({ icon, value, label, accentColor, cardColor }) {
           {icon}
         </div>
       </div>
-    </Card>
+    </div>
   );
 }
 
-function SummaryRow({ label, children }) {
+function AboutRow({ label, children }) {
   return (
     <div>
       <div className="text-sm font-medium">{label}</div>
@@ -142,10 +172,32 @@ function getLogoShapeClass(shape) {
   return shape === "rounded-square" ? "rounded-2xl" : "rounded-full";
 }
 
+function formatDate(value) {
+  if (!value) return "Date TBA";
+
+  return new Date(value).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function formatTime(value) {
+  if (!value) return "Time TBA";
+
+  return new Date(value).toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
 export default function ClubProfile() {
   const [form, setForm] = useState(emptyForm);
   const [savedForm, setSavedForm] = useState(emptyForm);
   const [stats, setStats] = useState(emptyStats);
+  const [posts, setPosts] = useState([]);
+  const [events, setEvents] = useState([]);
+  const [activeTab, setActiveTab] = useState("posts");
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -154,18 +206,24 @@ export default function ClubProfile() {
     setIsLoading(true);
 
     try {
-      const [profileResult, dashboardResult] = await Promise.all([
+      const [profileResult, dashboardResult, postsResult, eventsResult] = await Promise.all([
         getClubProfile(),
         getClubDashboard().catch(() => ({ data: {} })),
+        getClubPosts().catch(() => ({ data: { posts: [] } })),
+        getClubEvents().catch(() => ({ data: { events: [] } })),
       ]);
       const nextForm = buildForm(profileResult.data.club);
+      const nextPosts = postsResult.data.posts ?? [];
+      const nextEvents = eventsResult.data.events ?? [];
 
       setForm(nextForm);
       setSavedForm(nextForm);
+      setPosts(nextPosts);
+      setEvents(nextEvents);
       setStats({
-        followers: dashboardResult.data.stats?.followers ?? profileResult.data.club?.followers ?? 0,
-        totalPosts: dashboardResult.data.stats?.totalPosts ?? 0,
-        upcomingEvents: dashboardResult.data.stats?.upcomingEvents ?? 0,
+        followers: profileResult.data.club?.followers ?? dashboardResult.data.stats?.followers ?? 0,
+        totalPosts: nextPosts.length || dashboardResult.data.stats?.totalPosts || 0,
+        upcomingEvents: nextEvents.length || dashboardResult.data.stats?.upcomingEvents || 0,
       });
     } catch (error) {
       toast.error(getApiErrorMessage(error, "Could not load profile."));
@@ -302,9 +360,9 @@ export default function ClubProfile() {
         <Card className="p-8 text-center text-sm text-[var(--muted-foreground)]">Loading profile...</Card>
       ) : (
         <div className="space-y-6 rounded-xl p-4 sm:p-6" style={profileStyle}>
-          <section>
+          <section className="mb-6">
             <div className="relative">
-              <div className="h-56 overflow-hidden rounded-xl sm:h-64">
+              <div className="h-56 overflow-hidden rounded-xl sm:h-72">
                 {form.bannerUrl ? (
                   <img src={form.bannerUrl} alt="" className="h-full w-full object-cover" />
                 ) : (
@@ -316,46 +374,38 @@ export default function ClubProfile() {
                   />
                 )}
                 <div className="absolute inset-0 rounded-xl bg-black/10" />
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="absolute right-4 top-4 bg-[var(--card)]/95"
-                  onClick={() => setIsEditOpen(true)}
-                >
-                  <Camera className="h-4 w-4" />
-                  Edit Banner
-                </Button>
               </div>
 
               <div className="absolute bottom-0 left-6 translate-y-1/2">
-                {form.logoUrl ? (
-                  <img
-                    src={form.logoUrl}
-                    alt={form.clubName}
-                    className={`h-[100px] w-[100px] ${logoShapeClass} border-4 border-white bg-[var(--card)] object-cover shadow-[var(--shadow-md)]`}
-                  />
-                ) : (
-                  <div className={`flex h-[100px] w-[100px] items-center justify-center ${logoShapeClass} border-4 border-white bg-[var(--card)] text-4xl font-semibold text-[var(--primary)] shadow-[var(--shadow-md)]`}>
-                    {form.clubName?.charAt(0)?.toUpperCase() || "C"}
-                  </div>
-                )}
+                <ClubAvatar logoUrl={form.logoUrl} name={form.clubName} logoShape={form.logoShape} hero />
               </div>
             </div>
 
-            <div className="pt-16">
-              <div className="mb-2 flex flex-wrap items-center gap-2">
-                <span className="rounded-full border px-3 py-1 text-xs font-medium capitalize" style={{ borderColor: accentColor }}>
-                  {form.category}
-                </span>
-                <span
-                  className="rounded-full px-3 py-1 text-xs font-medium"
-                  style={{ backgroundColor: hexToRgba(accentColor, 0.14), color: accentColor }}
+            <div className="flex flex-col gap-4 pt-16 sm:flex-row sm:items-end sm:justify-between">
+              <h2 className="ml-6 text-3xl font-semibold" style={{ color: primaryTextColor }}>{form.clubName}</h2>
+
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  style={{ backgroundColor: accentColor, borderColor: accentColor, color: "#fff" }}
                 >
-                  Public Profile
-                </span>
+                  <Heart className="h-4 w-4" />
+                  Follow
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  disabled
+                  aria-label="Enable notifications"
+                >
+                  <BellOff className="h-4 w-4" />
+                </Button>
+                <Button type="button" variant="ghost" size="icon" aria-label="Report club">
+                  <Flag className="h-4 w-4" />
+                </Button>
               </div>
-              <h2 className="text-3xl font-semibold text-[var(--profile-primary-text)]">{form.clubName}</h2>
-              <p className="mt-2 max-w-3xl text-sm text-[var(--profile-secondary-text)]">{form.description}</p>
             </div>
           </section>
 
@@ -365,35 +415,138 @@ export default function ClubProfile() {
             <ProfileStat icon={<FileText className="h-5 w-5" />} value={stats.totalPosts} label="Posts" accentColor={accentColor} cardColor={cardColor} />
           </section>
 
-          <Card className="p-6" style={{ backgroundColor: cardColor, borderColor: "transparent", color: primaryTextColor }}>
-            <h3 className="mb-5 text-xl font-semibold">About</h3>
-            <div className="grid gap-5 md:grid-cols-2">
-              <SummaryRow label="Category">
-                <span className="capitalize">{form.category}</span>
-              </SummaryRow>
-              <SummaryRow label="Contact">
-                {form.email}
-              </SummaryRow>
-              <SummaryRow label="Bio">
-                {form.description}
-              </SummaryRow>
-              <SummaryRow label="Accent Color">
-                {accentColor}
-              </SummaryRow>
-              <SummaryRow label="Background Color">
-                {backgroundColor}
-              </SummaryRow>
-              <SummaryRow label="Cards Color">
-                {cardColor}
-              </SummaryRow>
-              <SummaryRow label="Primary Text Color">
-                {primaryTextColor}
-              </SummaryRow>
-              <SummaryRow label="Secondary Text Color">
-                {secondaryTextColor}
-              </SummaryRow>
+          <div>
+            <div className="flex gap-6">
+              {tabItems.map((tab) => {
+                const isActive = activeTab === tab;
+
+                return (
+                  <button
+                    key={tab}
+                    type="button"
+                    onClick={() => setActiveTab(tab)}
+                    className={`border-b-2 px-1 pb-3 text-sm capitalize transition-colors ${
+                      isActive ? "font-semibold text-[var(--profile-primary-text)]" : "border-transparent text-[var(--profile-secondary-text)] hover:text-[var(--profile-primary-text)]"
+                    }`}
+                    style={{ borderBottomColor: isActive ? accentColor : "transparent" }}
+                  >
+                    {tab}
+                  </button>
+                );
+              })}
             </div>
-          </Card>
+          </div>
+
+          {activeTab === "posts" && (
+            <div className="space-y-4">
+              {posts.length === 0 ? (
+                <EmptyState title="No posts yet" description="This club has not posted anything yet." />
+              ) : (
+                posts.map((post) => (
+                  <Card
+                    key={post.id}
+                    className="p-6"
+                    style={
+                      post.isPinned
+                        ? {
+                            background: `linear-gradient(135deg, ${hexToRgba(accentColor, 0.1)}, ${cardColor} 54%)`,
+                            borderColor: hexToRgba(accentColor, 0.28),
+                            color: primaryTextColor,
+                          }
+                        : { backgroundColor: cardColor, borderColor: "transparent", color: primaryTextColor }
+                    }
+                  >
+                    <div className="flex items-start gap-3">
+                      <ClubAvatar logoUrl={form.logoUrl} name={form.clubName} logoShape={form.logoShape} />
+                      <div className="min-w-0 flex-1 pt-2">
+                        <div className="mb-2 flex items-center gap-2">
+                          <span className="text-xl font-semibold">{form.clubName}</span>
+                          {post.isPinned && (
+                            <Badge variant="outline" className="text-xs" style={{ borderColor: accentColor, color: accentColor }}>
+                              <Pin className="h-3 w-3" />
+                              Pinned
+                            </Badge>
+                          )}
+                        </div>
+                        <h3 className="mb-2 text-base font-semibold" style={{ color: primaryTextColor }}>{post.title}</h3>
+                        <p className="mb-3 text-[var(--profile-secondary-text)]">{post.content}</p>
+                        {post.imageUrl && (
+                          <img src={post.imageUrl} alt="" className="mb-4 max-h-80 w-full rounded-lg object-cover" />
+                        )}
+                        <div className="flex items-center justify-between gap-3 text-sm text-[var(--profile-secondary-text)]">
+                          <span>{formatDate(post.createdAt)}</span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            aria-label="Like post"
+                            style={{ color: accentColor }}
+                          >
+                            <Heart className="h-4 w-4" />
+                            <span>{post.likesCount ?? 0}</span>
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </Card>
+                ))
+              )}
+            </div>
+          )}
+
+          {activeTab === "events" && (
+            <div className="space-y-4">
+              {events.length === 0 ? (
+                <EmptyState title="No upcoming events" description="Check back soon for new events." />
+              ) : (
+                <div className="grid gap-4 md:grid-cols-2">
+                  {events.map((event) => (
+                    <Card key={event.id} className="overflow-hidden transition-colors hover:bg-[var(--accent)]" style={{ backgroundColor: cardColor, borderColor: "transparent", color: primaryTextColor }}>
+                      {event.imageUrl && <img src={event.imageUrl} alt="" className="h-40 w-full object-cover" />}
+                      <div className="p-6">
+                        <h3 className="mb-2 text-lg font-semibold" style={{ color: primaryTextColor }}>{event.title}</h3>
+                        <p className="mb-4 text-sm text-[var(--profile-secondary-text)]">{event.content ?? event.description}</p>
+                        <div className="space-y-2 text-sm">
+                          <div className="flex items-center gap-2">
+                            <Calendar className="h-4 w-4 text-[var(--profile-secondary-text)]" />
+                            <span>{formatDate(event.startDateTime)}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Clock className="h-4 w-4 text-[var(--profile-secondary-text)]" />
+                            <span>{event.hasStartTime === false ? "Time TBA" : formatTime(event.startDateTime)}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <MapPin className="h-4 w-4 text-[var(--profile-secondary-text)]" />
+                            <span>{event.location || "Location TBA"}</span>
+                          </div>
+                        </div>
+                        <Button type="button" className="mt-4 w-full" style={{ backgroundColor: accentColor, color: "#fff" }}>
+                          View Event
+                        </Button>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === "about" && (
+            <Card className="p-6" style={{ backgroundColor: cardColor, borderColor: "transparent", color: primaryTextColor }}>
+              <h2 className="mb-5 text-xl font-semibold" style={{ color: primaryTextColor }}>About</h2>
+              <div className="space-y-5">
+                <AboutRow label="Category">
+                  <span className="capitalize">{form.category}</span>
+                </AboutRow>
+                <AboutRow label="Description">
+                  {form.description}
+                </AboutRow>
+                <AboutRow label="Contact">
+                  {form.email}
+                </AboutRow>
+              </div>
+            </Card>
+          )}
         </div>
       )}
 

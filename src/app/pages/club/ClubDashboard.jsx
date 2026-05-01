@@ -212,7 +212,7 @@ export default function ClubDashboard() {
                               </span>
                               <span className="flex items-center gap-1.5">
                                 <Clock className="w-3.5 h-3.5" />
-                                {formatTime(event.startDateTime)}
+                                {event.hasStartTime === false ? "Time TBA" : formatTime(event.startDateTime)}
                               </span>
                               <span className="flex items-center gap-1.5">
                                 <MapPin className="w-3.5 h-3.5" />

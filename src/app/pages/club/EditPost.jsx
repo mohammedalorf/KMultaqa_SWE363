@@ -12,7 +12,7 @@ import { Label } from "../../components/ui/label";
 import { Switch } from "../../components/ui/switch";
 import { getApiErrorMessage } from "../../api/apiClient";
 import { getClubPost, updateClubPost } from "../../api/clubApi";
-import { ImageUploadField } from "../../components/ImageUploadField";
+import { ImageUploadField, contentImageAspectRatioOptions } from "../../components/ImageUploadField";
 
 export default function EditPost() {
   const navigate = useNavigate();
@@ -114,6 +114,7 @@ export default function EditPost() {
                   folder="posts"
                   disabled={isSaving}
                   aspectRatio={16 / 9}
+                  aspectRatioOptions={contentImageAspectRatioOptions}
                 />
               </div>
 

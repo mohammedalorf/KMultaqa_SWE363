@@ -73,6 +73,14 @@ const eventSchema = new Schema({
       message: 'End date and time must be after start date and time',
     },
   },
+  hasStartTime: {
+    type: Boolean,
+    default: true,
+  },
+  hasEndTime: {
+    type: Boolean,
+    default: true,
+  },
   location: {
     type: String,
     trim: true,

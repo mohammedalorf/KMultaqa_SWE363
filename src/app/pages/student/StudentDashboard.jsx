@@ -323,6 +323,19 @@ export default function StudentDashboard() {
                       {item.content && <p className="text-[var(--muted-foreground)]">{item.content.length > 200 ? `${item.content.substring(0, 200)}...` : item.content}</p>}
                     </div>
 
+                    {item.type === "event" && item.imageUrl && (
+                      <Link
+                        to={`/student/event/${item.id}`}
+                        className="-mx-6 mb-4 block overflow-hidden bg-[var(--card)]"
+                      >
+                        <img
+                          src={item.imageUrl}
+                          alt=""
+                          className="max-h-[640px] w-full object-contain"
+                        />
+                      </Link>
+                    )}
+
                     {item.type === "event" && (
                       <div className="bg-[var(--accent)]/50 rounded-lg p-4 mb-4">
                         <div className="grid sm:grid-cols-2 gap-3">
@@ -332,7 +345,7 @@ export default function StudentDashboard() {
                           </div>
                           <div className="flex items-center gap-2 text-sm">
                             <Clock className="w-4 h-4 text-[var(--primary)]" />
-                            <span>{formatEventTime(item.startDateTime)}</span>
+                            <span>{item.hasStartTime === false ? "Time TBA" : formatEventTime(item.startDateTime)}</span>
                           </div>
                           <div className="flex items-center gap-2 text-sm">
                             <MapPin className="w-4 h-4 text-[var(--primary)]" />

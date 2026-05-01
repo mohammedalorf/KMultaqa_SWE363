@@ -134,7 +134,7 @@ export default function MyEvents() {
                         </div>
                         <div className="flex items-center gap-2">
                           <Clock className="w-4 h-4 text-[var(--muted-foreground)]" />
-                          <span>{formatTime(event.startDateTime)}</span>
+                          <span>{event.hasStartTime === false ? "Time TBA" : formatTime(event.startDateTime)}</span>
                         </div>
                         <div className="flex items-center gap-2">
                           <MapPin className="w-4 h-4 text-[var(--muted-foreground)]" />

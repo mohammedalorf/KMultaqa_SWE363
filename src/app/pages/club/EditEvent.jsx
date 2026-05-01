@@ -14,7 +14,7 @@ import { Switch } from "../../components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
 import { getApiErrorMessage } from "../../api/apiClient";
 import { getClubEvent, updateClubEvent } from "../../api/clubApi";
-import { ImageUploadField } from "../../components/ImageUploadField";
+import { ImageUploadField, contentImageAspectRatioOptions } from "../../components/ImageUploadField";
 
 const categories = [
   { value: "academic", label: "Academic" },
@@ -26,6 +26,10 @@ const categories = [
   { value: "other", label: "Other" },
 ];
 const optionFieldTypes = new Set(["checkbox", "radio"]);
+
+function buildEventDateTime(dateValue, timeValue, fallbackTime) {
+  return new Date(`${dateValue}T${timeValue ? `${timeValue}:00` : fallbackTime}`);
+}
 
 function toInputDate(value) {
   if (!value) return "";
@@ -76,8 +80,8 @@ export default function EditEvent() {
         setDescription(event?.description ?? "");
         setCategory(event?.category ?? "other");
         setDate(toInputDate(event?.startDateTime));
-        setTime(toInputTime(event?.startDateTime));
-        setEndTime(toInputTime(event?.endDateTime));
+        setTime(event?.hasStartTime === false ? "" : toInputTime(event?.startDateTime));
+        setEndTime(event?.hasEndTime === false ? "" : toInputTime(event?.endDateTime));
         setCapacity(event?.capacity ? String(event.capacity) : "");
         setImageUrl(event?.imageUrl ?? "");
         setRequiresRegistrationApproval(Boolean(event?.requiresRegistrationApproval));
@@ -201,8 +205,8 @@ export default function EditEvent() {
   };
 
   const handleUpdate = async () => {
-    if (!title.trim() || !description.trim() || !date || !time || !endTime) {
-      toast.error("Title, description, start time, and end time are required.");
+    if (!title.trim() || !description.trim() || !date) {
+      toast.error("Title, description, and date are required.");
       return;
     }
 
@@ -223,8 +227,8 @@ export default function EditEvent() {
 
     if (!validateRegistrationFields()) return;
 
-    const startDateTime = new Date(`${date}T${time}:00`);
-    const endDateTime = new Date(`${date}T${endTime}:00`);
+    const startDateTime = buildEventDateTime(date, time, "00:00:00");
+    const endDateTime = buildEventDateTime(date, endTime, "23:59:59");
 
     if (endDateTime <= startDateTime) {
       toast.error("End time must be after start time.");
@@ -249,6 +253,8 @@ export default function EditEvent() {
         category,
         startDateTime: startDateTime.toISOString(),
         endDateTime: endDateTime.toISOString(),
+        hasStartTime: Boolean(time),
+        hasEndTime: Boolean(endTime),
         location: finalLocation,
         capacity,
         imageUrl,
@@ -310,11 +316,11 @@ export default function EditEvent() {
                   <Input id="date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
                 </div>
                 <div>
-                  <Label htmlFor="time">Start Time</Label>
+                  <Label htmlFor="time">Start Time (optional)</Label>
                   <Input id="time" type="time" value={time} onChange={(e) => setTime(e.target.value)} />
                 </div>
                 <div>
-                  <Label htmlFor="endTime">End Time</Label>
+                  <Label htmlFor="endTime">End Time (optional)</Label>
                   <Input id="endTime" type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
                 </div>
               </div>
@@ -358,6 +364,7 @@ export default function EditEvent() {
                     folder="events"
                     disabled={isSaving}
                     aspectRatio={16 / 9}
+                    aspectRatioOptions={contentImageAspectRatioOptions}
                   />
                 </div>
               </div>

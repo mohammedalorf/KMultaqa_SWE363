@@ -174,6 +174,8 @@ function serializeEvent(event, registeredCount = 0) {
     category: event.category,
     startDateTime: event.startDateTime,
     endDateTime: event.endDateTime,
+    hasStartTime: event.hasStartTime !== false,
+    hasEndTime: event.hasEndTime !== false,
     location: event.location ?? '',
     capacity: event.capacity ?? null,
     imageUrl: event.imageUrl ?? null,
@@ -756,6 +758,8 @@ clubRouter.post('/events', requireAuth, requireRole('club'), async (req, res, ne
 
     const startDateTime = parseDate(req.body?.startDateTime, 'Start date and time');
     const endDateTime = parseDate(req.body?.endDateTime, 'End date and time');
+    const hasStartTime = req.body?.hasStartTime === undefined ? true : Boolean(req.body.hasStartTime);
+    const hasEndTime = req.body?.hasEndTime === undefined ? true : Boolean(req.body.hasEndTime);
     const category = typeof req.body?.category === 'string' ? req.body.category.trim() : 'other';
 
     if (endDateTime <= startDateTime) {
@@ -773,6 +777,8 @@ clubRouter.post('/events', requireAuth, requireRole('club'), async (req, res, ne
       category,
       startDateTime,
       endDateTime,
+      hasStartTime,
+      hasEndTime,
       location: optionalString(req.body?.location),
       capacity: normalizeCapacity(req.body?.capacity),
       imageUrl: optionalString(req.body?.imageUrl),
@@ -840,6 +846,14 @@ clubRouter.patch('/events/:eventId', requireAuth, requireRole('club'), async (re
 
     if (req.body?.endDateTime !== undefined) {
       event.endDateTime = parseDate(req.body.endDateTime, 'End date and time');
+    }
+
+    if (req.body?.hasStartTime !== undefined) {
+      event.hasStartTime = Boolean(req.body.hasStartTime);
+    }
+
+    if (req.body?.hasEndTime !== undefined) {
+      event.hasEndTime = Boolean(req.body.hasEndTime);
     }
 
     if (event.endDateTime <= event.startDateTime) {

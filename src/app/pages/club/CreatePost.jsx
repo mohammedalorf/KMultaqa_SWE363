@@ -12,7 +12,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { createClubPost } from "../../api/clubApi";
 import { getApiErrorMessage } from "../../api/apiClient";
-import { ImageUploadField } from "../../components/ImageUploadField";
+import { ImageUploadField, contentImageAspectRatioOptions } from "../../components/ImageUploadField";
 
 export default function CreatePost() {
   const navigate = useNavigate();
@@ -78,6 +78,7 @@ export default function CreatePost() {
                 folder="posts"
                 disabled={isPublishing}
                 aspectRatio={16 / 9}
+                aspectRatioOptions={contentImageAspectRatioOptions}
               />
             </div>
 

@@ -49,20 +49,23 @@ function formatDate(value) {
   });
 }
 
-function formatTimeRange(start, end) {
-  if (!start) return "Time TBA";
+function formatTimeRange(start, end, hasStartTime = true, hasEndTime = true) {
+  if (!start || (hasStartTime === false && hasEndTime === false)) return "Time TBA";
 
-  const startText = new Date(start).toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-  });
-  const endText = end
+  const startText = hasStartTime === false
+    ? null
+    : new Date(start).toLocaleTimeString("en-US", {
+        hour: "numeric",
+        minute: "2-digit",
+      });
+  const endText = end && hasEndTime !== false
     ? new Date(end).toLocaleTimeString("en-US", {
         hour: "numeric",
         minute: "2-digit",
       })
     : null;
 
+  if (!startText && endText) return `Until ${endText}`;
   return endText ? `${startText} - ${endText}` : startText;
 }
 
@@ -230,7 +233,7 @@ export default function MyEvents() {
                       </div>
                       <div className="flex items-center text-sm text-[var(--muted-foreground)]">
                         <Clock className="w-4 h-4 mr-2" />
-                        <span>{formatTimeRange(event.startDateTime, event.endDateTime)}</span>
+                        <span>{formatTimeRange(event.startDateTime, event.endDateTime, event.hasStartTime, event.hasEndTime)}</span>
                       </div>
                       <div className="flex items-center text-sm text-[var(--muted-foreground)]">
                         <MapPin className="w-4 h-4 mr-2" />

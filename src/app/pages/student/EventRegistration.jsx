@@ -42,20 +42,23 @@ function formatDate(value) {
   });
 }
 
-function formatTimeRange(start, end) {
-  if (!start) return "Time TBA";
+function formatTimeRange(start, end, hasStartTime = true, hasEndTime = true) {
+  if (!start || (hasStartTime === false && hasEndTime === false)) return "Time TBA";
 
-  const startText = new Date(start).toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-  });
-  const endText = end
+  const startText = hasStartTime === false
+    ? null
+    : new Date(start).toLocaleTimeString("en-US", {
+        hour: "numeric",
+        minute: "2-digit",
+      });
+  const endText = end && hasEndTime !== false
     ? new Date(end).toLocaleTimeString("en-US", {
         hour: "numeric",
         minute: "2-digit",
       })
     : null;
 
+  if (!startText && endText) return `Until ${endText}`;
   return endText ? `${startText} - ${endText}` : startText;
 }
 
@@ -243,6 +246,16 @@ export default function EventRegistration() {
         subtitle={event.description || "Event details and registration information."}
       />
 
+      {event.imageUrl && (
+        <div className="mb-6 flex justify-center overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--accent)]/35">
+          <img
+            src={event.imageUrl}
+            alt=""
+            className="max-h-[560px] max-w-full object-contain"
+          />
+        </div>
+      )}
+
       <Section>
         <Card className="p-6">
           <div className="flex items-start gap-4">
@@ -256,7 +269,7 @@ export default function EventRegistration() {
                 </div>
                 <div className="flex items-center gap-2 text-sm">
                   <Clock className="w-4 h-4 text-[var(--muted-foreground)]" />
-                  <span>{formatTimeRange(event.startDateTime, event.endDateTime)}</span>
+                  <span>{formatTimeRange(event.startDateTime, event.endDateTime, event.hasStartTime, event.hasEndTime)}</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm">
                   <MapPin className="w-4 h-4 text-[var(--muted-foreground)]" />
