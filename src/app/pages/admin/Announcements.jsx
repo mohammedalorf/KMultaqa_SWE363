@@ -25,6 +25,8 @@ export default function Announcements() {
   const [audience, setAudience] = useState("all");
   const [publishMode, setPublishMode] = useState("now");
   const [scheduledAt, setScheduledAt] = useState("");
+  const [notifyAudience, setNotifyAudience] = useState(false);
+  const [lastDispatchResult, setLastDispatchResult] = useState(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [announcements, setAnnouncements] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -114,15 +116,22 @@ export default function Announcements() {
         title: title.trim(),
         message: content.trim(),
         audience,
+        notifyAudience,
       });
 
       setAnnouncements((prev) => [data.announcement, ...prev]);
-      toast.success("Announcement published successfully.");
+      setLastDispatchResult(data.notificationDelivery || null);
+      toast.success(
+        data.notificationDelivery?.recipients
+          ? `Announcement published. ${data.notificationDelivery.sent} notification emails sent.`
+          : "Announcement published successfully."
+      );
       setTitle("");
       setContent("");
       setAudience("all");
       setPublishMode("now");
       setScheduledAt("");
+      setNotifyAudience(false);
     } catch (error) {
       toast.error(getApiErrorMessage(error, "Could not publish announcement."));
     } finally {
@@ -192,6 +201,21 @@ export default function Announcements() {
                 </div>
               </div>
 
+              <label className="flex items-start gap-3 rounded-lg border border-[var(--border)] p-3 text-sm">
+                <input
+                  type="checkbox"
+                  checked={notifyAudience}
+                  onChange={(event) => setNotifyAudience(event.target.checked)}
+                  className="mt-1"
+                />
+                <span>
+                  <span className="block font-medium text-[var(--foreground)]">Notify selected audience by email</span>
+                  <span className="block text-xs text-[var(--muted-foreground)]">
+                    Sends a backend-dispatched email summary to eligible recipients for the selected audience.
+                  </span>
+                </span>
+              </label>
+
               <div className="space-y-1.5">
                 <Label htmlFor="content">Content</Label>
                 <Textarea
@@ -214,6 +238,15 @@ export default function Announcements() {
                   {isPublishing ? "Publishing..." : publishMode === "scheduled" ? "Schedule" : "Publish Now"}
                 </Button>
               </div>
+
+              {lastDispatchResult && (
+                <div className="rounded-lg border border-[var(--border)] bg-[var(--accent)]/40 p-3 text-sm">
+                  <div className="font-medium text-[var(--foreground)]">Last notification dispatch</div>
+                  <div className="mt-1 text-xs text-[var(--muted-foreground)]">
+                    Recipients: {lastDispatchResult.recipients} · Sent: {lastDispatchResult.sent} · Failed: {lastDispatchResult.failed}
+                  </div>
+                </div>
+              )}
             </div>
           </Card>
         </Section>
@@ -257,7 +290,9 @@ export default function Announcements() {
           <p className="text-xs text-[var(--muted-foreground)]">
             {publishMode === "scheduled"
               ? `Scheduled for ${new Date(scheduledAt).toLocaleString()}.`
-              : "This announcement will publish immediately."}
+              : notifyAudience
+                ? "This announcement will publish immediately and notify the selected audience."
+                : "This announcement will publish immediately."}
           </p>
         </div>
         <DialogFooter>

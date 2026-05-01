@@ -91,11 +91,11 @@ Source checked against `phase3-REQ.pdf`.
   - [x] Show backend size-limit errors.
   - [x] Show export success/failure state.
 
-- [ ] Complete announcement UI for FR-6.
-  - [ ] Add preview action.
-  - [ ] Add scheduled publish controls.
-  - [ ] Validate future scheduled publish date in UI.
-  - [ ] Show notification dispatch result if applicable.
+- [x] Complete announcement UI for FR-6.
+  - [x] Add preview action.
+  - [x] Add scheduled publish controls.
+  - [x] Validate future scheduled publish date in UI.
+  - [x] Show notification dispatch result if applicable.
 
 - [x] Fix student event registration form validation for FR-21.
   - [x] Detect student ID fields.
