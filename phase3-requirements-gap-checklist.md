@@ -121,7 +121,7 @@ Source checked against `phase3-REQ.pdf`.
 
 ## Verification
 
-- [ ] Run backend syntax check: `npm.cmd --prefix backend run check`.
+- [x] Run backend syntax check: `npm.cmd --prefix backend run check`.
 - [ ] Reinstall frontend dependencies if needed.
 - [ ] Run frontend build: `npm.cmd run build`.
 - [ ] Smoke test admin, club, and student flows after changes.
