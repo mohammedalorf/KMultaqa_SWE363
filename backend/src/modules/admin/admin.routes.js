@@ -4,6 +4,7 @@ import Announcement from '../../../models/Announcement.js';
 import Club from '../../../models/Club.js';
 import ClubRequest from '../../../models/ClubRequest.js';
 import Event from '../../../models/Event.js';
+import Post from '../../../models/Post.js';
 import Report from '../../../models/Report.js';
 import { env } from '../../config/env.js';
 import { requireAuth, requireRole } from '../../middlewares/auth.middleware.js';
@@ -166,6 +167,98 @@ function sendCsv(res, filename, headers, rows) {
   res.setHeader('Content-Type', 'text/csv; charset=utf-8');
   res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
   res.status(200).send(buildCsv(headers, rows));
+}
+
+function normalizeModerationAction(value) {
+  const action = typeof value === 'string' ? value.trim().toLowerCase() : 'dismiss';
+
+  if (!['dismiss', 'hide', 'remove', 'warn', 'suspend'].includes(action)) {
+    throw createError(400, 'Moderation action is invalid');
+  }
+
+  return action;
+}
+
+function normalizeOptionalText(value) {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+function buildModerationNote({ action, reasonCategory, warningType, suspensionDurationDays, evidenceReference, adminNote }) {
+  const parts = [`Action: ${action}`];
+
+  if (reasonCategory) {
+    parts.push(`Reason: ${reasonCategory}`);
+  }
+
+  if (warningType) {
+    parts.push(`Warning type: ${warningType}`);
+  }
+
+  if (suspensionDurationDays) {
+    parts.push(`Suspension duration: ${suspensionDurationDays} days`);
+  }
+
+  if (evidenceReference) {
+    parts.push(`Evidence: ${evidenceReference}`);
+  }
+
+  if (adminNote) {
+    parts.push(`Note: ${adminNote}`);
+  }
+
+  return parts.join('\n');
+}
+
+async function getClubIdForReportTarget(report) {
+  if (report.targetModel === 'Club') {
+    return report.target;
+  }
+
+  if (report.targetModel === 'Post') {
+    const post = await Post.findById(report.target).select('club').lean();
+    return post?.club ?? null;
+  }
+
+  if (report.targetModel === 'Event') {
+    const event = await Event.findById(report.target).select('club').lean();
+    return event?.club ?? null;
+  }
+
+  return null;
+}
+
+async function applyModerationAction(report, action, adminNote) {
+  if (action === 'dismiss' || action === 'warn') {
+    return;
+  }
+
+  if (action === 'suspend') {
+    const clubId = await getClubIdForReportTarget(report);
+
+    if (!clubId) {
+      throw createError(404, 'Target club not found for suspension');
+    }
+
+    await Club.findByIdAndUpdate(clubId, {
+      $set: {
+        status: 'suspended',
+        suspensionReason: adminNote || 'Suspended after report moderation',
+      },
+    });
+    return;
+  }
+
+  if (report.targetModel === 'Post') {
+    await Post.findByIdAndUpdate(report.target, { $set: { status: 'hidden' } });
+    return;
+  }
+
+  if (report.targetModel === 'Event') {
+    await Event.findByIdAndUpdate(report.target, { $set: { status: 'cancelled' } });
+    return;
+  }
+
+  throw createError(400, `${action} is only available for reported posts or events`);
 }
 
 function getPasswordSetupExpiryDate() {
@@ -517,32 +610,77 @@ adminRouter.patch('/reports/:reportId', requireAuth, requireRole('admin'), async
     ensureObjectId(req.params.reportId, 'Report');
 
     const status = typeof req.body?.status === 'string' ? req.body.status.trim().toLowerCase() : '';
+    const action = normalizeModerationAction(req.body?.moderationAction);
+    const reasonCategory = normalizeOptionalText(req.body?.reasonCategory);
+    const warningType = normalizeOptionalText(req.body?.warningType);
+    const evidenceReference = normalizeOptionalText(req.body?.evidenceReference);
     const adminNote = normalizeAdminNote(req.body?.adminNote);
+    const suspensionDurationDays = req.body?.suspensionDurationDays
+      ? Number(req.body.suspensionDurationDays)
+      : null;
 
     if (!['resolved', 'dismissed'].includes(status)) {
       throw createError(400, 'Status must be resolved or dismissed');
     }
 
-    const report = await Report.findByIdAndUpdate(
-      req.params.reportId,
-      {
-        status,
-        adminNote,
-        reviewedAt: new Date(),
-      },
-      { new: true, runValidators: true }
-    )
-      .populate('reporter', 'fullName email')
-      .populate('target')
-      .lean();
+    if (status === 'dismissed' && action !== 'dismiss') {
+      throw createError(400, 'Dismissed reports must use the dismiss action');
+    }
+
+    if (status === 'resolved' && action === 'dismiss') {
+      throw createError(400, 'Resolved reports require a moderation action');
+    }
+
+    if (['hide', 'remove'].includes(action) && !reasonCategory) {
+      throw createError(400, 'Reason category is required for hide/remove actions');
+    }
+
+    if (action === 'warn' && (!warningType || !adminNote)) {
+      throw createError(400, 'Warning type and message are required');
+    }
+
+    if (action === 'suspend') {
+      if (!adminNote) {
+        throw createError(400, 'Suspension reason is required');
+      }
+
+      if (!Number.isInteger(suspensionDurationDays) || suspensionDurationDays < 1) {
+        throw createError(400, 'Suspension duration must be a positive whole number');
+      }
+    }
+
+    const report = await Report.findById(req.params.reportId);
 
     if (!report) {
       throw createError(404, 'Report not found');
     }
 
+    if (report.status !== 'pending') {
+      throw createError(400, 'Only pending reports can be moderated');
+    }
+
+    await applyModerationAction(report, action, adminNote);
+
+    report.status = status;
+    report.adminNote = buildModerationNote({
+      action,
+      reasonCategory,
+      warningType,
+      suspensionDurationDays,
+      evidenceReference,
+      adminNote,
+    });
+    report.reviewedAt = new Date();
+    await report.save();
+
+    const updatedReport = await Report.findById(report._id)
+      .populate('reporter', 'fullName email')
+      .populate('target')
+      .lean();
+
     res.status(200).json({
       message: 'Report updated',
-      report: serializeReport(report),
+      report: serializeReport(updatedReport),
     });
   } catch (error) {
     next(error);

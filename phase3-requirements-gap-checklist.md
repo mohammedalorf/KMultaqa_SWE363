@@ -11,14 +11,14 @@ Source checked against `phase3-REQ.pdf`.
   - [ ] Validate appeal time window, original decision reference, and attachments if used.
   - [ ] Notify requester and log final outcome.
 
-- [ ] Expand reports moderation actions for FR-2 and FR-4.
-  - [ ] Support remove post.
-  - [ ] Support hide content.
-  - [ ] Support warn club.
-  - [ ] Support suspend club.
-  - [ ] Require valid report state before action.
-  - [ ] Require reason/category for hide/remove.
-  - [ ] Apply action to the target content/account, not only the report record.
+- [x] Expand reports moderation actions for FR-2 and FR-4.
+  - [x] Support remove post.
+  - [x] Support hide content.
+  - [x] Support warn club.
+  - [x] Support suspend club.
+  - [x] Require valid report state before action.
+  - [x] Require reason/category for hide/remove.
+  - [x] Apply action to the target content/account, not only the report record.
 
 - [ ] Implement warnings/notices for FR-5.
   - [ ] Add warning records/history for clubs.
