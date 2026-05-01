@@ -226,6 +226,11 @@ function normalizeAnswers(answers) {
     .filter((answer) => answer.fieldLabel && answer.answer);
 }
 
+function isStudentIdField(label = '') {
+  const normalized = String(label).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+  return normalized.includes('student id') || normalized.includes('kfupm id');
+}
+
 function validateRegistrationAnswers(event, answers) {
   const answersByLabel = new Map(answers.map((answer) => [answer.fieldLabel, answer.answer]));
 
@@ -241,6 +246,10 @@ function validateRegistrationAnswers(event, answers) {
 
     if (field.fieldType === 'email' && value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
       return `${field.label} must be a valid email address`;
+    }
+
+    if (isStudentIdField(field.label) && value && !/^s\d{9}$/i.test(String(value).trim())) {
+      return `${field.label} must match format s123456789`;
     }
 
     if (optionFieldTypes.has(field.fieldType) && value && options.length > 0) {

@@ -56,9 +56,9 @@ Source checked against `phase3-REQ.pdf`.
   - [ ] Store delivery status/logs.
   - [ ] Return publish notification summary to club publishing endpoints.
 
-- [ ] Strengthen event registration validation for FR-21.
-  - [ ] Validate student ID format when a registration field asks for student ID.
-  - [ ] Keep duplicate-registration and deadline checks server-side.
+- [x] Strengthen event registration validation for FR-21.
+  - [x] Validate student ID format when a registration field asks for student ID.
+  - [x] Keep duplicate-registration and deadline checks server-side.
 
 - [ ] Fix club search relevance for FR-19.
   - [ ] Enforce minimum query behavior server-side if required.
