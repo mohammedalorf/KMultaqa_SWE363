@@ -22,10 +22,10 @@ Source checked against `phase3-REQ.pdf`.
 
 - [ ] Implement warnings/notices for FR-5.
   - [ ] Add warning records/history for clubs.
-  - [ ] Require warning type.
-  - [ ] Require warning message.
-  - [ ] Support optional evidence/report reference.
-  - [ ] Notify club by in-app and/or email.
+  - [x] Require warning type.
+  - [x] Require warning message.
+  - [x] Support optional evidence/report reference.
+  - [x] Notify club by in-app and/or email.
 
 - [ ] Complete club status management for FR-3.
   - [ ] Add `restricted` status, if required.

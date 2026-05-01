@@ -200,3 +200,51 @@ export async function sendFollowerContentEmail({ to, studentName, clubName, cont
 
   return { sent: true, delivery: 'smtp', recipient };
 }
+
+export async function sendClubWarningEmail({ to, clubName, warningType, message, evidenceReference }) {
+  const recipient = String(to ?? '').trim().toLowerCase();
+
+  if (!recipient) {
+    return { sent: false, delivery: 'none', recipient: '' };
+  }
+
+  const evidenceText = evidenceReference || 'No evidence reference was provided.';
+
+  if (!env.smtp.enabled) {
+    console.log(`Club warning email for ${recipient}`);
+    console.log(`Club: ${clubName}`);
+    console.log(`Warning type: ${warningType}`);
+    console.log(`Message: ${message}`);
+    console.log(`Evidence: ${evidenceText}`);
+    return { sent: false, delivery: 'console', recipient };
+  }
+
+  await getTransporter().sendMail({
+    from: env.smtp.from,
+    to: recipient,
+    subject: 'KMultaqa club warning notice',
+    text: [
+      `Hello ${clubName},`,
+      '',
+      `Warning type: ${warningType}`,
+      '',
+      'Message:',
+      message,
+      '',
+      'Evidence/reference:',
+      evidenceText,
+      '',
+      'Please review platform guidelines and correct the issue.',
+    ].join('\n'),
+    html: `
+      <p>Hello ${escapeHtml(clubName)},</p>
+      <p><strong>Warning type:</strong> ${escapeHtml(warningType)}</p>
+      <p><strong>Message:</strong></p>
+      <p>${escapeHtml(message)}</p>
+      <p><strong>Evidence/reference:</strong> ${escapeHtml(evidenceText)}</p>
+      <p>Please review platform guidelines and correct the issue.</p>
+    `,
+  });
+
+  return { sent: true, delivery: 'smtp', recipient };
+}

@@ -8,7 +8,7 @@ import Post from '../../../models/Post.js';
 import Report from '../../../models/Report.js';
 import { env } from '../../config/env.js';
 import { requireAuth, requireRole } from '../../middlewares/auth.middleware.js';
-import { sendClubPasswordSetupEmail, sendClubRequestRejectionEmail } from '../../utils/email.js';
+import { sendClubPasswordSetupEmail, sendClubRequestRejectionEmail, sendClubWarningEmail } from '../../utils/email.js';
 import { createError } from '../../utils/jwt.js';
 import { createRandomToken, hashToken } from '../../utils/tokens.js';
 
@@ -227,8 +227,37 @@ async function getClubIdForReportTarget(report) {
   return null;
 }
 
-async function applyModerationAction(report, action, adminNote) {
-  if (action === 'dismiss' || action === 'warn') {
+async function sendWarningForReport(report, { warningType, evidenceReference, adminNote }) {
+  const clubId = await getClubIdForReportTarget(report);
+
+  if (!clubId) {
+    throw createError(404, 'Target club not found for warning');
+  }
+
+  const club = await Club.findById(clubId).select('clubName email').lean();
+
+  if (!club) {
+    throw createError(404, 'Target club not found for warning');
+  }
+
+  return sendClubWarningEmail({
+    to: club.email,
+    clubName: club.clubName,
+    warningType,
+    message: adminNote,
+    evidenceReference,
+  });
+}
+
+async function applyModerationAction(report, action, details) {
+  const { adminNote } = details;
+
+  if (action === 'dismiss') {
+    return;
+  }
+
+  if (action === 'warn') {
+    await sendWarningForReport(report, details);
     return;
   }
 
@@ -659,7 +688,11 @@ adminRouter.patch('/reports/:reportId', requireAuth, requireRole('admin'), async
       throw createError(400, 'Only pending reports can be moderated');
     }
 
-    await applyModerationAction(report, action, adminNote);
+    await applyModerationAction(report, action, {
+      adminNote,
+      warningType,
+      evidenceReference,
+    });
 
     report.status = status;
     report.adminNote = buildModerationNote({
