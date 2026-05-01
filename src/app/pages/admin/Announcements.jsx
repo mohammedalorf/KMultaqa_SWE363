@@ -9,7 +9,8 @@ import { Input } from "../../components/ui/input";
 import { Textarea } from "../../components/ui/textarea";
 import { Label } from "../../components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
-import { Send } from "lucide-react";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "../../components/ui/dialog";
+import { Eye, Send } from "lucide-react";
 import { getApiErrorMessage } from "../../api/apiClient";
 import { createAdminAnnouncement, getAdminAnnouncements } from "../../api/adminApi";
 
@@ -22,6 +23,9 @@ export default function Announcements() {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [audience, setAudience] = useState("all");
+  const [publishMode, setPublishMode] = useState("now");
+  const [scheduledAt, setScheduledAt] = useState("");
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [announcements, setAnnouncements] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isPublishing, setIsPublishing] = useState(false);
@@ -68,13 +72,38 @@ export default function Announcements() {
       return `Content must be between ${CONTENT_MIN} and ${CONTENT_MAX} characters.`;
     }
 
+    if (publishMode === "scheduled") {
+      if (!scheduledAt) {
+        return "Scheduled publish date and time is required.";
+      }
+
+      if (new Date(scheduledAt).getTime() <= Date.now()) {
+        return "Scheduled publish time must be in the future.";
+      }
+    }
+
     return "";
+  };
+
+  const handlePreview = () => {
+    const validationError = validateAnnouncement();
+    if (validationError) {
+      toast.error(validationError);
+      return;
+    }
+
+    setIsPreviewOpen(true);
   };
 
   const handlePublish = async () => {
     const validationError = validateAnnouncement();
     if (validationError) {
       toast.error(validationError);
+      return;
+    }
+
+    if (publishMode === "scheduled") {
+      toast.error("Scheduled publishing needs backend queue support before it can be saved.");
       return;
     }
 
@@ -92,6 +121,8 @@ export default function Announcements() {
       setTitle("");
       setContent("");
       setAudience("all");
+      setPublishMode("now");
+      setScheduledAt("");
     } catch (error) {
       toast.error(getApiErrorMessage(error, "Could not publish announcement."));
     } finally {
@@ -100,6 +131,7 @@ export default function Announcements() {
   };
 
   return (
+    <>
     <PageContainer>
       <PageHeader
         eyebrow="Content"
@@ -131,6 +163,35 @@ export default function Announcements() {
                 </Select>
               </div>
 
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label>Publish Timing</Label>
+                  <Select value={publishMode} onValueChange={setPublishMode}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="now">Publish now</SelectItem>
+                      <SelectItem value="scheduled">Schedule for later</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="scheduledAt">Scheduled Time</Label>
+                  <Input
+                    id="scheduledAt"
+                    type="datetime-local"
+                    value={scheduledAt}
+                    onChange={(e) => setScheduledAt(e.target.value)}
+                    disabled={publishMode !== "scheduled"}
+                  />
+                  {publishMode === "scheduled" && scheduledAt && new Date(scheduledAt).getTime() <= Date.now() && (
+                    <p className="text-xs text-[var(--destructive)]">Choose a future date and time.</p>
+                  )}
+                </div>
+              </div>
+
               <div className="space-y-1.5">
                 <Label htmlFor="content">Content</Label>
                 <Textarea
@@ -143,10 +204,14 @@ export default function Announcements() {
                 <p className="text-xs text-[var(--muted-foreground)]">{content.trim().length}/{CONTENT_MAX} characters</p>
               </div>
 
-              <div className="flex justify-end pt-2 border-t border-[var(--border)]">
+              <div className="flex flex-wrap justify-end gap-2 pt-2 border-t border-[var(--border)]">
+                <Button variant="outline" onClick={handlePreview}>
+                  <Eye className="w-4 h-4" />
+                  Preview
+                </Button>
                 <Button onClick={handlePublish} disabled={isPublishing}>
                   <Send className="w-4 h-4" />
-                  {isPublishing ? "Publishing..." : "Publish Now"}
+                  {isPublishing ? "Publishing..." : publishMode === "scheduled" ? "Schedule" : "Publish Now"}
                 </Button>
               </div>
             </div>
@@ -164,7 +229,7 @@ export default function Announcements() {
                 <Card key={announcement.id} className="p-4">
                   <div className="text-sm font-semibold mb-1">{announcement.title}</div>
                   <div className="text-xs text-[var(--muted-foreground)] mb-2">
-                    Published: {new Date(announcement.createdAt).toLocaleDateString()} · Audience: {announcement.audience}
+                    Published: {new Date(announcement.createdAt).toLocaleDateString()} - Audience: {announcement.audience}
                   </div>
                   <div className="text-sm text-[var(--muted-foreground)] line-clamp-3">{announcement.message}</div>
                 </Card>
@@ -174,5 +239,32 @@ export default function Announcements() {
         </Section>
       </div>
     </PageContainer>
+    <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Announcement Preview</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="rounded-lg border border-[var(--border)] p-4">
+            <div className="text-xs font-medium uppercase text-[var(--muted-foreground)]">
+              {audience} audience
+            </div>
+            <h3 className="mt-2 text-lg font-semibold">{title.trim()}</h3>
+            <p className="mt-3 whitespace-pre-wrap text-sm text-[var(--muted-foreground)]">
+              {content.trim()}
+            </p>
+          </div>
+          <p className="text-xs text-[var(--muted-foreground)]">
+            {publishMode === "scheduled"
+              ? `Scheduled for ${new Date(scheduledAt).toLocaleString()}.`
+              : "This announcement will publish immediately."}
+          </p>
+        </div>
+        <DialogFooter>
+          <Button onClick={() => setIsPreviewOpen(false)}>Close</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }
