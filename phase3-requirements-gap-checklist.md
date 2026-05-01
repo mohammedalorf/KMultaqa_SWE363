@@ -31,8 +31,8 @@ Source checked against `phase3-REQ.pdf`.
   - [ ] Add `restricted` status, if required.
   - [ ] Support duration for suspend/restrict.
   - [ ] Store status history.
-  - [ ] Enforce transition rules.
-  - [ ] Notify clubs on status changes.
+  - [x] Enforce transition rules.
+  - [x] Notify clubs on status changes.
   - [ ] Add audit log for admin status changes.
 
 - [x] Implement real admin export backend for FR-8.

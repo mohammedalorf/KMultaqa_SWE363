@@ -8,7 +8,12 @@ import Post from '../../../models/Post.js';
 import Report from '../../../models/Report.js';
 import { env } from '../../config/env.js';
 import { requireAuth, requireRole } from '../../middlewares/auth.middleware.js';
-import { sendClubPasswordSetupEmail, sendClubRequestRejectionEmail, sendClubWarningEmail } from '../../utils/email.js';
+import {
+  sendClubPasswordSetupEmail,
+  sendClubRequestRejectionEmail,
+  sendClubStatusEmail,
+  sendClubWarningEmail,
+} from '../../utils/email.js';
 import { createError } from '../../utils/jwt.js';
 import { createRandomToken, hashToken } from '../../utils/tokens.js';
 
@@ -348,6 +353,38 @@ function ensureObjectId(id, resourceName) {
   }
 }
 
+function validateClubStatusTransition(club, nextStatus, suspensionReason) {
+  if (club.status === nextStatus) {
+    throw createError(400, `Club is already ${nextStatus}`);
+  }
+
+  if (nextStatus === 'suspended' && club.status !== 'active') {
+    throw createError(400, 'Only active clubs can be suspended');
+  }
+
+  if (nextStatus === 'active' && club.status !== 'suspended') {
+    throw createError(400, 'Only suspended clubs can be reactivated');
+  }
+
+  if (nextStatus === 'suspended' && !suspensionReason) {
+    throw createError(400, 'Suspension reason is required');
+  }
+}
+
+async function notifyClubStatusChange(club, status, reason) {
+  try {
+    return await sendClubStatusEmail({
+      to: club.email,
+      clubName: club.clubName,
+      status,
+      reason,
+    });
+  } catch (error) {
+    console.error('Failed to send club status email', error);
+    return { sent: false, delivery: 'failed', recipient: club.email };
+  }
+}
+
 async function approveClubRequest(request, adminNote) {
   const existingClub = await Club.findOne({
     $or: [
@@ -516,27 +553,30 @@ adminRouter.patch('/clubs/:clubId/status', requireAuth, requireRole('admin'), as
       throw createError(400, 'Status must be active or suspended');
     }
 
-    if (status === 'suspended' && !suspensionReason) {
-      throw createError(400, 'Suspension reason is required');
-    }
+    const existingClub = await Club.findById(req.params.clubId);
 
-    const update =
-      status === 'suspended'
-        ? { $set: { status, suspensionReason } }
-        : { $set: { status }, $unset: { suspensionReason: '' } };
-
-    const club = await Club.findByIdAndUpdate(req.params.clubId, update, {
-      new: true,
-      runValidators: true,
-    }).lean();
-
-    if (!club) {
+    if (!existingClub) {
       throw createError(404, 'Club not found');
     }
 
+    validateClubStatusTransition(existingClub, status, suspensionReason);
+
+    existingClub.status = status;
+
+    if (status === 'suspended') {
+      existingClub.suspensionReason = suspensionReason;
+    } else {
+      existingClub.suspensionReason = undefined;
+    }
+
+    await existingClub.save();
+
+    const emailDelivery = await notifyClubStatusChange(existingClub, status, suspensionReason);
+
     res.status(200).json({
       message: 'Club status updated',
-      club: serializeClub(club),
+      club: serializeClub(existingClub.toObject()),
+      emailDelivery,
     });
   } catch (error) {
     next(error);

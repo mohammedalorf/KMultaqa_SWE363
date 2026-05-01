@@ -248,3 +248,47 @@ export async function sendClubWarningEmail({ to, clubName, warningType, message,
 
   return { sent: true, delivery: 'smtp', recipient };
 }
+
+export async function sendClubStatusEmail({ to, clubName, status, reason }) {
+  const recipient = String(to ?? '').trim().toLowerCase();
+
+  if (!recipient) {
+    return { sent: false, delivery: 'none', recipient: '' };
+  }
+
+  const statusLabel = status === 'suspended' ? 'suspended' : 'reactivated';
+  const reasonText = reason || 'No additional note was provided.';
+
+  if (!env.smtp.enabled) {
+    console.log(`Club status email for ${recipient}`);
+    console.log(`Club: ${clubName}`);
+    console.log(`Status: ${statusLabel}`);
+    console.log(`Reason: ${reasonText}`);
+    return { sent: false, delivery: 'console', recipient };
+  }
+
+  await getTransporter().sendMail({
+    from: env.smtp.from,
+    to: recipient,
+    subject: `KMultaqa club account ${statusLabel}`,
+    text: [
+      `Hello ${clubName},`,
+      '',
+      `Your club account has been ${statusLabel}.`,
+      '',
+      'Admin note:',
+      reasonText,
+      '',
+      'Contact the platform administrator if you believe this needs review.',
+    ].join('\n'),
+    html: `
+      <p>Hello ${escapeHtml(clubName)},</p>
+      <p>Your club account has been <strong>${escapeHtml(statusLabel)}</strong>.</p>
+      <p><strong>Admin note:</strong></p>
+      <p>${escapeHtml(reasonText)}</p>
+      <p>Contact the platform administrator if you believe this needs review.</p>
+    `,
+  });
+
+  return { sent: true, delivery: 'smtp', recipient };
+}
