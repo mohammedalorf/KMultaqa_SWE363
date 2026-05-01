@@ -22,10 +22,22 @@ function reportStatusVariant(status) {
   return "warning";
 }
 
+const moderationActions = {
+  dismiss: "Dismiss report",
+  hide: "Hide content",
+  remove: "Remove content",
+  warn: "Warn club",
+  suspend: "Suspend club",
+};
+
 export default function ReportsModeration() {
   const [reports, setReports] = useState([]);
   const [selectedReport, setSelectedReport] = useState(null);
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
+  const [moderationAction, setModerationAction] = useState("hide");
+  const [reasonCategory, setReasonCategory] = useState("");
+  const [warningType, setWarningType] = useState("");
+  const [suspensionDuration, setSuspensionDuration] = useState("7");
   const [adminNote, setAdminNote] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [isLoading, setIsLoading] = useState(true);
@@ -63,30 +75,78 @@ export default function ReportsModeration() {
 
   const handleViewReport = (report) => {
     setSelectedReport(report);
+    setModerationAction("hide");
+    setReasonCategory("");
+    setWarningType("");
+    setSuspensionDuration("7");
     setAdminNote(report.adminNote || "");
     setShowDetailsDialog(true);
   };
 
   const canApplyAction = selectedReport?.status === "pending";
 
-  const handleAction = async (status) => {
+  const validateModerationAction = () => {
+    if (["hide", "remove"].includes(moderationAction) && !reasonCategory) {
+      return "Choose a policy reason before hiding or removing content.";
+    }
+
+    if (moderationAction === "warn" && !warningType) {
+      return "Choose a warning type before sending a warning.";
+    }
+
+    if (moderationAction === "warn" && !adminNote.trim()) {
+      return "Warning message is required.";
+    }
+
+    if (moderationAction === "suspend" && !adminNote.trim()) {
+      return "Suspension reason is required.";
+    }
+
+    if (moderationAction === "suspend" && Number(suspensionDuration) < 1) {
+      return "Suspension duration must be at least 1 day.";
+    }
+
+    return "";
+  };
+
+  const handleAction = async () => {
     if (!selectedReport || !canApplyAction) {
       toast.error("Only pending reports can be moderated.");
       return;
     }
+
+    const validationError = validateModerationAction();
+    if (validationError) {
+      toast.error(validationError);
+      return;
+    }
+
+    const status = moderationAction === "dismiss" ? "dismissed" : "resolved";
 
     setIsSaving(true);
 
     try {
       const { data } = await updateAdminReport(selectedReport.id, {
         status,
+        moderationAction,
+        reasonCategory,
+        warningType,
+        suspensionDurationDays: moderationAction === "suspend" ? Number(suspensionDuration) : undefined,
         adminNote: adminNote.trim(),
       });
 
       setReports((prev) => prev.map((report) => (report.id === selectedReport.id ? data.report : report)));
-      toast.success(status === "resolved" ? "Report resolved." : "Report dismissed.");
+      toast.success(
+        moderationAction === "dismiss"
+          ? "Report dismissed."
+          : `${moderationActions[moderationAction]} action recorded.`
+      );
       setShowDetailsDialog(false);
       setSelectedReport(null);
+      setModerationAction("hide");
+      setReasonCategory("");
+      setWarningType("");
+      setSuspensionDuration("7");
       setAdminNote("");
     } catch (error) {
       toast.error(getApiErrorMessage(error, "Could not update report."));
@@ -234,8 +294,80 @@ export default function ReportsModeration() {
                   {selectedReport.description || "No description provided."}
                 </div>
               </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <Label>Moderation Action</Label>
+                  <Select value={moderationAction} onValueChange={setModerationAction} disabled={!canApplyAction}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="hide">Hide content</SelectItem>
+                      <SelectItem value="remove">Remove content</SelectItem>
+                      <SelectItem value="warn">Warn club</SelectItem>
+                      <SelectItem value="suspend">Suspend club</SelectItem>
+                      <SelectItem value="dismiss">Dismiss report</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {["hide", "remove"].includes(moderationAction) && (
+                  <div>
+                    <Label>Policy Reason</Label>
+                    <Select value={reasonCategory} onValueChange={setReasonCategory} disabled={!canApplyAction}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select reason" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="spam">Spam</SelectItem>
+                        <SelectItem value="misleading">Misleading information</SelectItem>
+                        <SelectItem value="harassment">Harassment</SelectItem>
+                        <SelectItem value="inappropriate">Inappropriate content</SelectItem>
+                        <SelectItem value="other">Other policy violation</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {moderationAction === "warn" && (
+                  <div>
+                    <Label>Warning Type</Label>
+                    <Select value={warningType} onValueChange={setWarningType} disabled={!canApplyAction}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select warning type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="policy-violation">Policy violation</SelectItem>
+                        <SelectItem value="misconduct">Misconduct</SelectItem>
+                        <SelectItem value="repeated-offense">Repeated offense</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {moderationAction === "suspend" && (
+                  <div>
+                    <Label htmlFor="suspensionDuration">Suspension Duration (days)</Label>
+                    <input
+                      id="suspensionDuration"
+                      type="number"
+                      min="1"
+                      value={suspensionDuration}
+                      onChange={(e) => setSuspensionDuration(e.target.value)}
+                      disabled={!canApplyAction}
+                      className="flex h-10 w-full rounded-lg border border-[var(--border)] bg-[var(--input-background)] px-3.5 py-2 text-sm"
+                    />
+                  </div>
+                )}
+              </div>
               <div>
-                <Label htmlFor="adminNote">Admin Note</Label>
+                <Label htmlFor="adminNote">
+                  {moderationAction === "warn"
+                    ? "Warning Message"
+                    : moderationAction === "suspend"
+                      ? "Suspension Reason"
+                      : "Admin Note"}
+                </Label>
                 <Textarea
                   id="adminNote"
                   placeholder="Add notes about your decision..."
@@ -247,11 +379,12 @@ export default function ReportsModeration() {
             </div>
           )}
           <DialogFooter className="flex-col sm:flex-row gap-2">
-            <Button variant="outline" onClick={() => handleAction("dismissed")} className="w-full sm:w-auto" disabled={!canApplyAction || isSaving}>
-              Dismiss
-            </Button>
-            <Button onClick={() => handleAction("resolved")} className="w-full sm:w-auto" disabled={!canApplyAction || isSaving}>
-              Resolve
+            <Button onClick={handleAction} className="w-full sm:w-auto" disabled={!canApplyAction || isSaving}>
+              {isSaving
+                ? "Saving..."
+                : moderationAction === "dismiss"
+                  ? "Dismiss Report"
+                  : `Confirm ${moderationActions[moderationAction]}`}
             </Button>
           </DialogFooter>
         </DialogContent>
