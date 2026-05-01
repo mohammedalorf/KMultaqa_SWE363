@@ -15,6 +15,7 @@ import EventRegistration from "./pages/student/EventRegistration";
 import AdminLogin from "./pages/admin/AdminLogin";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import Announcements from "./pages/admin/Announcements";
+import Appeals from "./pages/admin/Appeals";
 import ClubApprovals from "./pages/admin/ClubApprovals";
 import ClubManagement from "./pages/admin/ClubManagement";
 import ExportReports from "./pages/admin/ExportReports";
@@ -110,6 +111,7 @@ export const router = createBrowserRouter([
     children: [
       { path: "dashboard", element: <AdminDashboard /> },
       { path: "announcements", element: <Announcements /> },
+      { path: "appeals", element: <Appeals /> },
       { path: "club-approvals", element: <ClubApprovals /> },
       { path: "club-management", element: <ClubManagement /> },
       { path: "export", element: <ExportReports /> },
