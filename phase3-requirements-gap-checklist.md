@@ -82,7 +82,7 @@ Source checked against `phase3-REQ.pdf`.
 
 - [ ] Add club status history/timeline UI for FR-3.
   - [ ] Show previous status changes.
-  - [ ] Show transition guidance.
+  - [x] Show transition guidance.
   - [ ] Support restrict/suspend duration if backend supports it.
 
 - [x] Connect export UI to real backend for FR-8.
