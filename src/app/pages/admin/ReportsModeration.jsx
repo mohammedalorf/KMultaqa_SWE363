@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../../components/ui/dialog";
 import { Textarea } from "../../components/ui/textarea";
 import { Label } from "../../components/ui/label";
+import { Input } from "../../components/ui/input";
 import { Eye, Flag, Check, X } from "lucide-react";
 import { getApiErrorMessage } from "../../api/apiClient";
 import { getAdminReports, updateAdminReport } from "../../api/adminApi";
@@ -37,6 +38,7 @@ export default function ReportsModeration() {
   const [moderationAction, setModerationAction] = useState("hide");
   const [reasonCategory, setReasonCategory] = useState("");
   const [warningType, setWarningType] = useState("");
+  const [evidenceReference, setEvidenceReference] = useState("");
   const [suspensionDuration, setSuspensionDuration] = useState("7");
   const [adminNote, setAdminNote] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
@@ -78,6 +80,7 @@ export default function ReportsModeration() {
     setModerationAction("hide");
     setReasonCategory("");
     setWarningType("");
+    setEvidenceReference("");
     setSuspensionDuration("7");
     setAdminNote(report.adminNote || "");
     setShowDetailsDialog(true);
@@ -131,6 +134,7 @@ export default function ReportsModeration() {
         moderationAction,
         reasonCategory,
         warningType,
+        evidenceReference: evidenceReference.trim(),
         suspensionDurationDays: moderationAction === "suspend" ? Number(suspensionDuration) : undefined,
         adminNote: adminNote.trim(),
       });
@@ -146,6 +150,7 @@ export default function ReportsModeration() {
       setModerationAction("hide");
       setReasonCategory("");
       setWarningType("");
+      setEvidenceReference("");
       setSuspensionDuration("7");
       setAdminNote("");
     } catch (error) {
@@ -345,17 +350,29 @@ export default function ReportsModeration() {
                   </div>
                 )}
 
+                {moderationAction === "warn" && (
+                  <div>
+                    <Label htmlFor="evidenceReference">Evidence or Report Reference (optional)</Label>
+                    <Input
+                      id="evidenceReference"
+                      value={evidenceReference}
+                      onChange={(e) => setEvidenceReference(e.target.value)}
+                      placeholder={`Report ${selectedReport.id}`}
+                      disabled={!canApplyAction}
+                    />
+                  </div>
+                )}
+
                 {moderationAction === "suspend" && (
                   <div>
                     <Label htmlFor="suspensionDuration">Suspension Duration (days)</Label>
-                    <input
+                    <Input
                       id="suspensionDuration"
                       type="number"
                       min="1"
                       value={suspensionDuration}
                       onChange={(e) => setSuspensionDuration(e.target.value)}
                       disabled={!canApplyAction}
-                      className="flex h-10 w-full rounded-lg border border-[var(--border)] bg-[var(--input-background)] px-3.5 py-2 text-sm"
                     />
                   </div>
                 )}
