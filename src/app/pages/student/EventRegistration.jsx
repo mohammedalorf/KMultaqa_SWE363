@@ -68,6 +68,11 @@ function getFieldInputType(fieldType) {
   return "text";
 }
 
+function isStudentIdField(label = "") {
+  const normalized = label.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  return normalized.includes("student id") || normalized.includes("kfupm id");
+}
+
 function getSelectedOptions(value) {
   return Array.isArray(value) ? value : [];
 }
@@ -141,6 +146,14 @@ export default function EventRegistration() {
         !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value))
       ) {
         nextErrors[field.label] = `${field.label} must be a valid email address.`;
+      }
+
+      if (
+        isStudentIdField(field.label) &&
+        value &&
+        !/^s\d{9}$/i.test(String(value).trim())
+      ) {
+        nextErrors[field.label] = `${field.label} must match s123456789.`;
       }
     }
 
@@ -407,12 +420,17 @@ export default function EventRegistration() {
                       <Input
                         id={fieldId}
                         type={getFieldInputType(field.fieldType)}
-                        placeholder={`Enter ${field.label.toLowerCase()}`}
+                        placeholder={
+                          isStudentIdField(field.label)
+                            ? "s123456789"
+                            : `Enter ${field.label.toLowerCase()}`
+                        }
                         value={value}
                         onChange={(e) => {
                           setFormData({ ...formData, [field.label]: e.target.value });
                           setFormErrors({ ...formErrors, [field.label]: undefined });
                         }}
+                        pattern={isStudentIdField(field.label) ? "[sS][0-9]{9}" : undefined}
                         className={error ? "border-[var(--destructive)]" : ""}
                       />
                     )}
