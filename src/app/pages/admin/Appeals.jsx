@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { FileText, Gavel, Search } from "lucide-react";
 import { PageContainer } from "../../components/layout/PageContainer";
@@ -13,7 +13,8 @@ import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
 import { Textarea } from "../../components/ui/textarea";
-import { mockAppeals } from "../../data/mockData";
+import { getApiErrorMessage } from "../../api/apiClient";
+import { getAdminAppeals, updateAdminAppeal } from "../../api/adminApi";
 
 function getStatusVariant(status) {
   if (["overturned", "accepted"].includes(status)) return "success";
@@ -36,11 +37,43 @@ function normalizeAppeal(appeal) {
 }
 
 export default function Appeals() {
-  const [appeals, setAppeals] = useState(() => mockAppeals.map(normalizeAppeal));
+  const [appeals, setAppeals] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedAppeal, setSelectedAppeal] = useState(null);
   const [decision, setDecision] = useState("upheld");
   const [explanation, setExplanation] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadAppeals() {
+      setIsLoading(true);
+
+      try {
+        const { data } = await getAdminAppeals();
+
+        if (!cancelled) {
+          setAppeals((data.appeals || []).map(normalizeAppeal));
+        }
+      } catch (error) {
+        if (!cancelled) {
+          toast.error(getApiErrorMessage(error, "Could not load appeals."));
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    loadAppeals();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const filteredAppeals = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
@@ -66,27 +99,39 @@ export default function Appeals() {
     setExplanation("");
   };
 
-  const handleDecision = () => {
+  const handleDecision = async () => {
     if (!selectedAppeal) return;
+
+    if (selectedAppeal.status !== "pending") {
+      toast.error("Only pending appeals can be reviewed.");
+      return;
+    }
 
     if (!explanation.trim()) {
       toast.error("Decision explanation is required.");
       return;
     }
 
-    setAppeals((current) =>
-      current.map((appeal) =>
-        appeal.id === selectedAppeal.id
-          ? {
-              ...appeal,
-              status: decision,
-              explanation: explanation.trim(),
-            }
-          : appeal
-      )
-    );
-    toast.success(`Appeal ${decision}. Backend persistence still needs the appeals API.`);
-    closeAppeal();
+    setIsSaving(true);
+
+    try {
+      const { data } = await updateAdminAppeal(selectedAppeal.id, {
+        decision,
+        explanation: explanation.trim(),
+      });
+
+      const updatedAppeal = normalizeAppeal(data.appeal);
+
+      setAppeals((current) =>
+        current.map((appeal) => (appeal.id === selectedAppeal.id ? updatedAppeal : appeal))
+      );
+      toast.success(`Appeal ${decision}.`);
+      closeAppeal();
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "Could not review appeal."));
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -122,7 +167,15 @@ export default function Appeals() {
             <DataTh align="right">Actions</DataTh>
           </DataTableHead>
           <DataTableBody>
-            {filteredAppeals.length === 0 ? (
+            {isLoading ? (
+              <DataTr>
+                <DataTd colSpan={5}>
+                  <div className="py-8 text-center text-sm text-[var(--muted-foreground)]">
+                    Loading appeals...
+                  </div>
+                </DataTd>
+              </DataTr>
+            ) : filteredAppeals.length === 0 ? (
               <DataTr>
                 <DataTd colSpan={5}>
                   <div className="py-8 text-center text-sm text-[var(--muted-foreground)]">
@@ -191,7 +244,7 @@ export default function Appeals() {
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
                   <Label>Decision</Label>
-                  <Select value={decision} onValueChange={setDecision}>
+                  <Select value={decision} onValueChange={setDecision} disabled={selectedAppeal.status !== "pending"}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -201,6 +254,11 @@ export default function Appeals() {
                       <SelectItem value="modified">Modify decision</SelectItem>
                     </SelectContent>
                   </Select>
+                  {selectedAppeal.status !== "pending" && (
+                    <p className="mt-2 text-xs text-[var(--muted-foreground)]">
+                      This appeal has already been reviewed.
+                    </p>
+                  )}
                 </div>
                 <div className="rounded-lg border border-[var(--border)] p-3 text-xs text-[var(--muted-foreground)]">
                   <div className="mb-1 flex items-center gap-2 font-medium text-[var(--foreground)]">
@@ -219,13 +277,16 @@ export default function Appeals() {
                   onChange={(event) => setExplanation(event.target.value)}
                   placeholder="Explain the appeal decision..."
                   rows={4}
+                  disabled={selectedAppeal.status !== "pending"}
                 />
               </div>
             </div>
           )}
           <DialogFooter>
             <Button variant="outline" onClick={closeAppeal}>Cancel</Button>
-            <Button onClick={handleDecision}>Save Decision</Button>
+            <Button onClick={handleDecision} disabled={isSaving || selectedAppeal?.status !== "pending"}>
+              {isSaving ? "Saving..." : "Save Decision"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -67,11 +67,11 @@ Source checked against `phase3-REQ.pdf`.
 
 ## Frontend
 
-- [ ] Add admin appeals UI for FR-7.
-  - [ ] Add `/admin/appeals` route.
-  - [ ] Add appeals queue page.
-  - [ ] Add appeal detail review dialog/page.
-  - [ ] Support uphold, overturn, and modify decisions.
+- [x] Add admin appeals UI for FR-7.
+  - [x] Add `/admin/appeals` route.
+  - [x] Add appeals queue page.
+  - [x] Add appeal detail review dialog/page.
+  - [x] Support uphold, overturn, and modify decisions.
 
 - [ ] Expand reports moderation UI for FR-2 and FR-4.
   - [ ] Add action selector: remove, hide, warn, suspend, dismiss.
