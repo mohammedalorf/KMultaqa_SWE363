@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../../components/ui/dialog";
 import { Textarea } from "../../components/ui/textarea";
 import { Label } from "../../components/ui/label";
-import { Search, Users } from "lucide-react";
+import { History, Search, Users } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { getApiErrorMessage } from "../../api/apiClient";
@@ -21,6 +21,33 @@ const transitionGuidance = {
   active: "Active clubs can access all features. Use when the club is compliant.",
   suspended: "Suspended clubs are blocked from publishing and critical actions.",
 };
+
+function buildStatusTimeline(club) {
+  if (!club) return [];
+
+  const timeline = [];
+
+  if (club.approvedAt) {
+    timeline.push({
+      label: "Approved",
+      detail: "Club account was activated after admin approval.",
+      date: club.approvedAt,
+      tone: "success",
+    });
+  }
+
+  timeline.push({
+    label: club.status === "suspended" ? "Suspended" : "Active",
+    detail:
+      club.status === "suspended"
+        ? club.suspensionReason || "Club is currently suspended."
+        : "Club is currently active.",
+    date: null,
+    tone: club.status === "suspended" ? "destructive" : "success",
+  });
+
+  return timeline;
+}
 
 export default function ClubManagement() {
   const [clubs, setClubs] = useState([]);
@@ -217,6 +244,39 @@ export default function ClubManagement() {
               </Select>
               {newStatus && <p className="text-xs text-[var(--muted-foreground)] mt-2">{transitionGuidance[newStatus]}</p>}
             </div>
+
+            <div className="rounded-lg border border-[var(--border)] p-4">
+              <div className="mb-3 flex items-center gap-2 text-sm font-medium">
+                <History className="h-4 w-4 text-[var(--primary)]" />
+                Status History
+              </div>
+              <div className="space-y-3">
+                {buildStatusTimeline(selectedClub).map((item, index) => (
+                  <div key={`${item.label}-${index}`} className="flex gap-3">
+                    <div className="flex flex-col items-center">
+                      <div
+                        className={`h-2.5 w-2.5 rounded-full ${
+                          item.tone === "destructive" ? "bg-[var(--destructive)]" : "bg-[var(--success)]"
+                        }`}
+                      />
+                      {index < buildStatusTimeline(selectedClub).length - 1 && (
+                        <div className="mt-1 h-full min-h-8 w-px bg-[var(--border)]" />
+                      )}
+                    </div>
+                    <div className="min-w-0 pb-1">
+                      <div className="text-sm font-medium">{item.label}</div>
+                      <div className="text-xs text-[var(--muted-foreground)]">{item.detail}</div>
+                      {item.date && (
+                        <div className="mt-1 text-xs text-[var(--muted-foreground)]">
+                          {new Date(item.date).toLocaleString()}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
             <div>
               <Label htmlFor="reason">Reason {newStatus === "suspended" ? "(required)" : "(optional)"}</Label>
               <Textarea
