@@ -82,9 +82,12 @@ SMTP_ENABLED=false
 
 ## Usage instructions and examples
 
-Admin logs in at /admin/login to manage clubs, reports, and announcements.
-Club representatives log in at /club/login to create posts, manage events, and track followers.
-Students log in at /student/login to explore clubs, view events, and manage their registrations.
+- Admin:
+  Log in at `/admin/login` to manage club approvals, reports, announcements, and exports.
+- Club representative:
+  Log in at `/club/login` to manage club profile details, posts, events, and follower activity.
+- Student:
+  Log in at `/student/login` to explore clubs, view events, manage registrations, and update notification settings.
 
 ## Main routes
 
