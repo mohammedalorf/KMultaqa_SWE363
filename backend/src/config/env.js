@@ -81,7 +81,10 @@ const cloudinaryCloudName = getEnv('CLOUDINARY_CLOUD_NAME');
 const cloudinaryApiKey = getEnv('CLOUDINARY_API_KEY');
 const cloudinaryApiSecret = getEnv('CLOUDINARY_API_SECRET');
 
-if (nodeEnv === 'production' && jwtSecret === 'replace-with-a-long-random-secret') {
+if (
+  nodeEnv === 'production'
+  && jwtSecret === 'replace-with-a-long-random-secret'
+) {
   throw new Error('JWT_SECRET must be configured in production');
 }
 
@@ -97,7 +100,10 @@ export const env = {
   jwtSecret,
   jwtExpiresInSeconds: getNumberEnv('JWT_EXPIRES_IN_SECONDS', 86400),
   appBaseUrl: getEnv('APP_BASE_URL', 'http://localhost:5000'),
-  frontendBaseUrl: getEnv('FRONTEND_BASE_URL', corsOrigins[0] ?? 'http://localhost:5173'),
+  frontendBaseUrl: getEnv(
+    'FRONTEND_BASE_URL',
+    corsOrigins[0] ?? 'http://localhost:5173'
+  ),
   corsOrigins,
   smtp: {
     enabled: smtpEnabled,
@@ -119,5 +125,8 @@ export const env = {
     'EMAIL_VERIFICATION_EXPIRES_IN_SECONDS',
     600
   ),
-  passwordSetupExpiresInSeconds: getNumberEnv('PASSWORD_SETUP_EXPIRES_IN_SECONDS', 86400),
+  passwordSetupExpiresInSeconds: getNumberEnv(
+    'PASSWORD_SETUP_EXPIRES_IN_SECONDS',
+    86400
+  ),
 };
