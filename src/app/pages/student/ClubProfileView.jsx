@@ -23,6 +23,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Label } from "../../components/ui/label";
 import { Textarea } from "../../components/ui/textarea";
 import { getApiErrorMessage } from "../../api/apiClient";
+import { SocialLinkIcons } from "../../components/SocialLinkIcons";
 import {
   followStudentClub,
   getStudentClubProfile,
@@ -636,6 +637,11 @@ export default function ClubProfileView() {
             <AboutRow label="Contact">
               {club.email}
             </AboutRow>
+            <SocialLinkIcons
+              socialLinks={club.socialLinks}
+              accentColor={accentColor}
+              className="border-t border-[var(--border)] pt-5"
+            />
           </div>
         </Card>
       )}

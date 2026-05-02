@@ -22,12 +22,9 @@ export async function connectToDatabase() {
     connectionPromise = mongoose
       .connect(env.mongoUri, {
         dbName: env.databaseName,
+        autoIndex: env.nodeEnv !== 'production',
       })
-      .then(async () => {
-        await Promise.all(
-          mongoose.modelNames().map((modelName) => mongoose.model(modelName).init())
-        );
-
+      .then(() => {
         console.log(`MongoDB connected to ${env.databaseName}`);
         return mongoose.connection.db;
       })

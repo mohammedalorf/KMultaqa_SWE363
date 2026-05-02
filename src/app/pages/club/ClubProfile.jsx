@@ -15,6 +15,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { getApiErrorMessage } from "../../api/apiClient";
 import { getClubDashboard, getClubEvents, getClubPosts, getClubProfile, updateClubProfile } from "../../api/clubApi";
 import { ImageUploadField } from "../../components/ImageUploadField";
+import { SocialLinkIcons } from "../../components/SocialLinkIcons";
 
 const categories = [
   { value: "academic", label: "Academic" },
@@ -52,7 +53,6 @@ const emptyForm = {
     twitter: "",
     linkedin: "",
     website: "",
-    whatsapp: "",
   },
 };
 
@@ -110,7 +110,6 @@ function buildForm(club) {
       twitter: club?.socialLinks?.twitter ?? "",
       linkedin: club?.socialLinks?.linkedin ?? "",
       website: club?.socialLinks?.website ?? "",
-      whatsapp: club?.socialLinks?.whatsapp ?? "",
     },
   };
 }
@@ -544,6 +543,11 @@ export default function ClubProfile() {
                 <AboutRow label="Contact">
                   {form.email}
                 </AboutRow>
+                <SocialLinkIcons
+                  socialLinks={form.socialLinks}
+                  accentColor={accentColor}
+                  className="border-t border-[var(--border)] pt-5"
+                />
               </div>
             </Card>
           )}
@@ -709,12 +713,12 @@ export default function ClubProfile() {
                 <Input id="instagram" value={form.socialLinks.instagram} onChange={(e) => updateSocialLink("instagram", e.target.value)} />
               </div>
               <div>
-                <Label htmlFor="twitter">Twitter</Label>
+                <Label htmlFor="twitter">X</Label>
                 <Input id="twitter" value={form.socialLinks.twitter} onChange={(e) => updateSocialLink("twitter", e.target.value)} />
               </div>
               <div>
-                <Label htmlFor="whatsapp">WhatsApp URL</Label>
-                <Input id="whatsapp" value={form.socialLinks.whatsapp} onChange={(e) => updateSocialLink("whatsapp", e.target.value)} />
+                <Label htmlFor="linkedin">LinkedIn</Label>
+                <Input id="linkedin" value={form.socialLinks.linkedin} onChange={(e) => updateSocialLink("linkedin", e.target.value)} />
               </div>
             </div>
           </div>

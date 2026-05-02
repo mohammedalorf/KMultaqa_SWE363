@@ -12,6 +12,10 @@ import { hashToken } from '../../utils/tokens.js';
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const kfupmEmailPattern = /^[^\s@]+@kfupm\.edu\.sa$/i;
 const studentIdPattern = /^s\d{9}$/i;
+const authAccountFields =
+  'fullName clubName email studentId passwordHash isVerified status createdAt updatedAt';
+const sessionAccountFields =
+  'fullName clubName email studentId isVerified status createdAt updatedAt';
 
 function requiredString(value, fieldName) {
   if (typeof value !== 'string' || value.trim() === '') {
@@ -218,30 +222,32 @@ async function findAccountByEmail(email, role = '') {
   const normalizedEmail = email.toLowerCase();
 
   if (role === 'student') {
-    return Student.findOne({ email: normalizedEmail });
+    return Student.findOne({ email: normalizedEmail }).select(authAccountFields);
   }
 
   if (role === 'club') {
-    return Club.findOne({ email: normalizedEmail });
+    return Club.findOne({ email: normalizedEmail }).select(authAccountFields);
   }
 
   if (role === 'admin') {
-    return Admin.findOne({ email: normalizedEmail });
+    return Admin.findOne({ email: normalizedEmail }).select(authAccountFields);
   }
 
-  const student = await Student.findOne({ email: normalizedEmail });
+  const [student, club, admin] = await Promise.all([
+    Student.findOne({ email: normalizedEmail }).select(authAccountFields),
+    Club.findOne({ email: normalizedEmail }).select(authAccountFields),
+    Admin.findOne({ email: normalizedEmail }).select(authAccountFields),
+  ]);
 
   if (student) {
     return student;
   }
 
-  const club = await Club.findOne({ email: normalizedEmail });
-
   if (club) {
     return club;
   }
 
-  return Admin.findOne({ email: normalizedEmail });
+  return admin;
 }
 
 export async function loginUser(input) {
@@ -252,7 +258,9 @@ export async function loginUser(input) {
     throw createError(401, 'Invalid email or password');
   }
 
-  if (getRoleForAccount(user) === 'club' && !user.passwordHash) {
+  const accountRole = getRoleForAccount(user);
+
+  if (accountRole === 'club' && !user.passwordHash) {
     throw createError(403, 'Set your club password using the setup email before logging in');
   }
 
@@ -266,11 +274,11 @@ export async function loginUser(input) {
     throw createError(401, 'Invalid email or password');
   }
 
-  if (getRoleForAccount(user) === 'student' && !user.isVerified) {
+  if (accountRole === 'student' && !user.isVerified) {
     throw createError(403, 'Verify your email before logging in');
   }
 
-  if (getRoleForAccount(user) === 'club' && user.status === 'suspended') {
+  if (accountRole === 'club' && user.status === 'suspended') {
     throw createError(403, 'Club account is suspended');
   }
 
@@ -420,12 +428,12 @@ export async function findUserById(id, role) {
   const model = modelsByRole[role];
 
   if (model) {
-    return model.findById(id);
+    return model.findById(id).select(sessionAccountFields);
   }
 
   return (
-    (await Student.findById(id)) ||
-    (await Club.findById(id)) ||
-    Admin.findById(id)
+    (await Student.findById(id).select(sessionAccountFields)) ||
+    (await Club.findById(id).select(sessionAccountFields)) ||
+    Admin.findById(id).select(sessionAccountFields)
   );
 }
