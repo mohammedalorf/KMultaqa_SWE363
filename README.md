@@ -331,6 +331,9 @@ Example response (`201`):
 - Club routes: `/api/club/*`
 - Student routes: `/api/student/*`
 
+Main implemented routes:
+- Admin: `GET /admin/dashboard`, `GET /admin/club-requests`, `PATCH /admin/club-requests/:requestId`, `GET /admin/clubs`, `PATCH /admin/clubs/:clubId/status`, `GET /admin/reports`, `PATCH /admin/reports/:reportId`, `GET|POST|DELETE /admin/announcements`, `GET /admin/exports/:type`.
+
 For complete route coverage, see:
 - `backend/src/modules/admin/admin.routes.js`
 - `backend/src/modules/club/club.routes.js`
