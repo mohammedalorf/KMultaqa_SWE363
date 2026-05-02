@@ -126,6 +126,17 @@ Student:
 - `/student/settings`
 - `/student/my-events`
 
+## Troubleshooting
+
+- Port already in use:
+  Update `PORT` in `backend/.env` or stop the process using the current port.
+- Frontend cannot reach backend:
+  Verify `APP_BASE_URL`, `FRONTEND_BASE_URL`, and `CORS_ORIGIN` values in `backend/.env`.
+- Database connection errors:
+  Confirm `MONGODB_URI` and `MONGODB_DB_NAME` are valid and that MongoDB is running.
+- No emails are being sent:
+  Set `SMTP_ENABLED=true` and configure `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, and `SMTP_FROM`.
+
 ## Team Members
 - Abdulmalik Al AlShaikh
 - ABDULAZIZ MAHMOUD
