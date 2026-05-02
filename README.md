@@ -336,6 +336,13 @@ Main implemented routes:
 - Club: `POST /club/requests`, `GET /club/dashboard`, `GET|PATCH /club/profile`, `GET|POST /club/posts`, `GET|PATCH|DELETE /club/posts/:postId`, `GET|POST /club/events`, `GET|PATCH|DELETE /club/events/:eventId`, `GET|PATCH /club/events/:eventId/registrations`, `GET /club/followers`.
 - Student: `GET /student/dashboard`, `GET|PATCH /student/settings`, `GET /student/clubs`, `GET /student/clubs/:clubId`, `POST|DELETE /student/clubs/:clubId/follow`, `PATCH /student/clubs/:clubId/notifications`, `POST|DELETE /student/posts/:postId/like`, `POST /student/reports`, `GET /student/events/registrations`, `GET /student/events/:eventId`, `POST /student/events/:eventId/register`, `DELETE /student/events/:eventId/registration`.
 
+Quick API checks can be run with:
+
+```bash
+curl http://localhost:5000/api/health
+curl -H "Authorization: Bearer <token>" http://localhost:5000/api/student/dashboard
+```
+
 For complete route coverage, see:
 - `backend/src/modules/admin/admin.routes.js`
 - `backend/src/modules/club/club.routes.js`
