@@ -1006,6 +1006,25 @@ adminRouter.post('/announcements', requireAuth, requireRole('admin'), async (req
   }
 });
 
+adminRouter.delete('/announcements/:announcementId', requireAuth, requireRole('admin'), async (req, res, next) => {
+  try {
+    ensureObjectId(req.params.announcementId, 'Announcement');
+
+    const announcement = await Announcement.findByIdAndDelete(req.params.announcementId).lean();
+
+    if (!announcement) {
+      throw createError(404, 'Announcement not found');
+    }
+
+    res.status(200).json({
+      message: 'Announcement deleted',
+      announcement: serializeAnnouncement(announcement),
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 adminRouter.patch('/club-requests/:requestId', requireAuth, requireRole('admin'), async (req, res, next) => {
   try {
     const status = typeof req.body?.status === 'string' ? req.body.status.trim().toLowerCase() : '';

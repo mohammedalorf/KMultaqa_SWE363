@@ -10,9 +10,9 @@ import { Textarea } from "../../components/ui/textarea";
 import { Label } from "../../components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "../../components/ui/dialog";
-import { Eye, Send } from "lucide-react";
+import { Eye, Send, Trash2 } from "lucide-react";
 import { getApiErrorMessage } from "../../api/apiClient";
-import { createAdminAnnouncement, getAdminAnnouncements } from "../../api/adminApi";
+import { createAdminAnnouncement, deleteAdminAnnouncement, getAdminAnnouncements } from "../../api/adminApi";
 
 const TITLE_MIN = 8;
 const TITLE_MAX = 120;
@@ -31,6 +31,8 @@ export default function Announcements() {
   const [announcements, setAnnouncements] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isPublishing, setIsPublishing] = useState(false);
+  const [announcementToDelete, setAnnouncementToDelete] = useState(null);
+  const [deletingAnnouncementId, setDeletingAnnouncementId] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -136,6 +138,25 @@ export default function Announcements() {
       toast.error(getApiErrorMessage(error, "Could not publish announcement."));
     } finally {
       setIsPublishing(false);
+    }
+  };
+
+  const handleDeleteAnnouncement = async () => {
+    if (!announcementToDelete) return;
+
+    setDeletingAnnouncementId(announcementToDelete.id);
+
+    try {
+      await deleteAdminAnnouncement(announcementToDelete.id);
+      setAnnouncements((current) =>
+        current.filter((announcement) => announcement.id !== announcementToDelete.id)
+      );
+      toast.success("Announcement deleted.");
+      setAnnouncementToDelete(null);
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "Could not delete announcement."));
+    } finally {
+      setDeletingAnnouncementId("");
     }
   };
 
@@ -260,9 +281,24 @@ export default function Announcements() {
             ) : (
               announcements.map((announcement) => (
                 <Card key={announcement.id} className="p-4">
-                  <div className="text-sm font-semibold mb-1">{announcement.title}</div>
-                  <div className="text-xs text-[var(--muted-foreground)] mb-2">
-                    Published: {new Date(announcement.createdAt).toLocaleDateString()} - Audience: {announcement.audience}
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="text-sm font-semibold mb-1 break-words">{announcement.title}</div>
+                      <div className="text-xs text-[var(--muted-foreground)] mb-2">
+                        Published: {new Date(announcement.createdAt).toLocaleDateString()} - Audience: {announcement.audience}
+                      </div>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 shrink-0 text-[var(--destructive)] hover:text-[var(--destructive)]"
+                      aria-label={`Delete announcement: ${announcement.title}`}
+                      onClick={() => setAnnouncementToDelete(announcement)}
+                      disabled={deletingAnnouncementId === announcement.id}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
                   </div>
                   <div className="text-sm text-[var(--muted-foreground)] line-clamp-3">{announcement.message}</div>
                 </Card>
@@ -297,6 +333,50 @@ export default function Announcements() {
         </div>
         <DialogFooter>
           <Button onClick={() => setIsPreviewOpen(false)}>Close</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    <Dialog
+      open={Boolean(announcementToDelete)}
+      onOpenChange={(open) => {
+        if (!open && !deletingAnnouncementId) {
+          setAnnouncementToDelete(null);
+        }
+      }}
+    >
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Delete Announcement</DialogTitle>
+        </DialogHeader>
+        {announcementToDelete && (
+          <div className="space-y-3 text-sm">
+            <p className="text-[var(--muted-foreground)]">
+              Delete "{announcementToDelete.title}" from platform announcements?
+            </p>
+            <div className="rounded-lg border border-[var(--border)] p-3">
+              <div className="font-medium text-[var(--foreground)]">{announcementToDelete.title}</div>
+              <div className="mt-1 line-clamp-3 text-[var(--muted-foreground)]">
+                {announcementToDelete.message}
+              </div>
+            </div>
+          </div>
+        )}
+        <DialogFooter>
+          <Button
+            variant="outline"
+            onClick={() => setAnnouncementToDelete(null)}
+            disabled={Boolean(deletingAnnouncementId)}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={handleDeleteAnnouncement}
+            disabled={Boolean(deletingAnnouncementId)}
+          >
+            <Trash2 className="w-4 h-4" />
+            {deletingAnnouncementId ? "Deleting..." : "Delete"}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

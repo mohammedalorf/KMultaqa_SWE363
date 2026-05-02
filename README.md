@@ -48,7 +48,7 @@ npm run preview
 
 ## Usage instructions and examples
 
-Admin logs in at /admin/login to manage clubs, reports, announcements, and appeals.
+Admin logs in at /admin/login to manage clubs, reports, and announcements.
 Club representatives log in at /club/login to create posts, manage events, and track followers.
 Students log in at /student/login to explore clubs, view events, and manage their registrations.
 
@@ -61,7 +61,6 @@ Students log in at /student/login to explore clubs, view events, and manage thei
 - `/admin/reports`
 - `/admin/club-management`
 - `/admin/announcements`
-- `/admin/appeals`
 - `/admin/export`
 - `/admin/settings`
 - `/club/login`
