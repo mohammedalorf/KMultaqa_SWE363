@@ -26,25 +26,39 @@ src/
 
 ## Run locally
 
-1. Install dependencies:
+1. Install frontend dependencies (from project root):
 
 ```bash
 npm install
 ```
 
-2. Start the development server:
+2. Install backend dependencies:
+
+```bash
+cd backend
+npm install
+```
+
+3. Start the backend server:
+
+```bash
+cd backend
+npm run dev
+```
+
+4. Start the frontend development server:
 
 ```bash
 npm run dev
 ```
 
-3. Create a production build:
+5. Create a production build:
 
 ```bash
 npm run build
 ```
 
-4. Preview the production build:
+6. Preview the production build:
 
 ```bash
 npm run preview
