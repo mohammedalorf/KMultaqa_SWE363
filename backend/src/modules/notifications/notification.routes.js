@@ -16,37 +16,47 @@ function serializeNotification(notification) {
   };
 }
 
-notificationRouter.get('/', requireAuth, requireRole('student'), async (req, res, next) => {
-  try {
-    const [notifications, unreadCount] = await Promise.all([
-      Notification.find({ student: req.user._id })
-        .sort({ updatedAt: -1 })
-        .limit(20)
-        .lean(),
-      Notification.countDocuments({ student: req.user._id, isRead: false }),
-    ]);
+notificationRouter.get(
+  '/',
+  requireAuth,
+  requireRole('student'),
+  async (req, res, next) => {
+    try {
+      const [notifications, unreadCount] = await Promise.all([
+        Notification.find({ student: req.user._id })
+          .sort({ updatedAt: -1 })
+          .limit(20)
+          .lean(),
+        Notification.countDocuments({ student: req.user._id, isRead: false }),
+      ]);
 
-    res.status(200).json({
-      notifications: notifications.map(serializeNotification),
-      unreadCount,
-    });
-  } catch (error) {
-    next(error);
+      res.status(200).json({
+        notifications: notifications.map(serializeNotification),
+        unreadCount,
+      });
+    } catch (error) {
+      next(error);
+    }
   }
-});
+);
 
-notificationRouter.patch('/read', requireAuth, requireRole('student'), async (req, res, next) => {
-  try {
-    const result = await Notification.updateMany(
-      { student: req.user._id, isRead: false },
-      { $set: { isRead: true } }
-    );
+notificationRouter.patch(
+  '/read',
+  requireAuth,
+  requireRole('student'),
+  async (req, res, next) => {
+    try {
+      const result = await Notification.updateMany(
+        { student: req.user._id, isRead: false },
+        { $set: { isRead: true } }
+      );
 
-    res.status(200).json({
-      message: 'Notifications marked as read',
-      updatedCount: result.modifiedCount,
-    });
-  } catch (error) {
-    next(error);
+      res.status(200).json({
+        message: 'Notifications marked as read',
+        updatedCount: result.modifiedCount,
+      });
+    } catch (error) {
+      next(error);
+    }
   }
-});
+);
