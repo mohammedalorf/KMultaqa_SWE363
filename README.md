@@ -410,6 +410,6 @@ Student:
 
 ## Team Members
 - Abdulmalik Al AlShaikh
-- ABDULAZIZ MAHMOUD
-- EYAD ALKHALIFA
-- MOHAMMED ALORF
+- Abdulaziz Mahmoud
+- Eyad Alkhalifa
+- Mohammed Alorf
