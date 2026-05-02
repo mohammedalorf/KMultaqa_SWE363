@@ -91,7 +91,10 @@ SMTP_ENABLED=false
 
 ## Main routes
 
+General:
 - `/`
+
+Admin:
 - `/admin/login`
 - `/admin/dashboard`
 - `/admin/club-approvals`
@@ -100,6 +103,8 @@ SMTP_ENABLED=false
 - `/admin/announcements`
 - `/admin/export`
 - `/admin/settings`
+
+Club:
 - `/club/login`
 - `/club/dashboard`
 - `/club/profile`
@@ -111,6 +116,8 @@ SMTP_ENABLED=false
 - `/club/events/edit/:id`
 - `/club/registrations/:id`
 - `/club/followers`
+
+Student:
 - `/student/login`
 - `/student/dashboard`
 - `/student/explore`
