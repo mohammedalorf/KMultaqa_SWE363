@@ -309,57 +309,59 @@ export function DashboardLayout({ role, userName, userLogo, sidebarItems, childr
           </nav>
 
           <div className="flex items-center gap-1.5 shrink-0">
-            <div className="relative">
-              <button
-                type="button"
-                aria-label="Notifications"
-                onClick={handleNotificationsClick}
-                className="relative w-9 h-9 rounded-lg flex items-center justify-center text-[var(--muted-foreground)] hover:bg-[var(--accent)] hover:text-[var(--foreground)] transition-colors"
-              >
-                <Bell className="w-[18px] h-[18px]" />
-                {isStudent && unreadCount > 0 && (
-                  <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 rounded-full bg-[var(--destructive)] ring-2 ring-[var(--card)]" />
-                )}
-              </button>
+            {isStudent && (
+              <div className="relative">
+                <button
+                  type="button"
+                  aria-label="Notifications"
+                  onClick={handleNotificationsClick}
+                  className="relative w-9 h-9 rounded-lg flex items-center justify-center text-[var(--muted-foreground)] hover:bg-[var(--accent)] hover:text-[var(--foreground)] transition-colors"
+                >
+                  <Bell className="w-[18px] h-[18px]" />
+                  {unreadCount > 0 && (
+                    <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 rounded-full bg-[var(--destructive)] ring-2 ring-[var(--card)]" />
+                  )}
+                </button>
 
-              {isStudent && notificationsOpen && (
-                <div className="absolute right-0 top-11 w-80 max-w-[calc(100vw-2rem)] rounded-lg border border-[var(--border)] bg-[var(--card)] shadow-[var(--shadow-lg)] z-50 overflow-hidden">
-                  <div className="px-4 py-3 border-b border-[var(--border)]">
-                    <p className="text-sm font-semibold text-[var(--foreground)]">Notifications</p>
-                  </div>
-                  <div className="max-h-80 overflow-y-auto">
-                    {notificationsLoading ? (
-                      <div className="px-4 py-4 text-sm text-[var(--muted-foreground)]">Loading notifications...</div>
-                    ) : notifications.length === 0 ? (
-                      <div className="px-4 py-4 text-sm text-[var(--muted-foreground)]">No new notifications.</div>
-                    ) : (
-                      notifications.map((notification) => (
-                        <div
-                          key={notification.id}
-                          className={`px-4 py-3 border-b border-[var(--border)] last:border-b-0 ${
-                            notification.isRead ? "bg-transparent" : "bg-[var(--primary-soft)]/45"
-                          }`}
-                        >
-                          <div className="flex items-start gap-2.5">
-                            {!notification.isRead && (
-                              <span className="mt-1.5 h-2 w-2 rounded-full bg-[var(--primary)] shrink-0" aria-hidden />
+                {notificationsOpen && (
+                  <div className="absolute right-0 top-11 w-80 max-w-[calc(100vw-2rem)] rounded-lg border border-[var(--border)] bg-[var(--card)] shadow-[var(--shadow-lg)] z-50 overflow-hidden">
+                    <div className="px-4 py-3 border-b border-[var(--border)]">
+                      <p className="text-sm font-semibold text-[var(--foreground)]">Notifications</p>
+                    </div>
+                    <div className="max-h-80 overflow-y-auto">
+                      {notificationsLoading ? (
+                        <div className="px-4 py-4 text-sm text-[var(--muted-foreground)]">Loading notifications...</div>
+                      ) : notifications.length === 0 ? (
+                        <div className="px-4 py-4 text-sm text-[var(--muted-foreground)]">No new notifications.</div>
+                      ) : (
+                        notifications.map((notification) => (
+                          <div
+                            key={notification.id}
+                            className={`px-4 py-3 border-b border-[var(--border)] last:border-b-0 ${
+                              notification.isRead ? "bg-transparent" : "bg-[var(--primary-soft)]/45"
+                            }`}
+                          >
+                            <div className="flex items-start gap-2.5">
+                              {!notification.isRead && (
+                                <span className="mt-1.5 h-2 w-2 rounded-full bg-[var(--primary)] shrink-0" aria-hidden />
+                              )}
+                              <p className={`text-sm leading-snug ${notification.isRead ? "text-[var(--muted-foreground)]" : "text-[var(--foreground)]"}`}>
+                                {notification.message}
+                              </p>
+                            </div>
+                            {notification.createdAt && (
+                              <p className="text-xs text-[var(--muted-foreground)] mt-1 pl-4">
+                                {new Date(notification.createdAt).toLocaleString()}
+                              </p>
                             )}
-                            <p className={`text-sm leading-snug ${notification.isRead ? "text-[var(--muted-foreground)]" : "text-[var(--foreground)]"}`}>
-                              {notification.message}
-                            </p>
                           </div>
-                          {notification.createdAt && (
-                            <p className="text-xs text-[var(--muted-foreground)] mt-1 pl-4">
-                              {new Date(notification.createdAt).toLocaleString()}
-                            </p>
-                          )}
-                        </div>
-                      ))
-                    )}
+                        ))
+                      )}
+                    </div>
                   </div>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
+            )}
             <div className={`hidden sm:flex items-center justify-center w-8 h-8 rounded-full ${roleAccent} font-semibold text-sm shrink-0`}>
               {userLogo || userName?.charAt(0) || "U"}
             </div>
