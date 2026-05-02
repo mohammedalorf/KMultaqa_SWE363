@@ -86,6 +86,251 @@ FRONTEND_BASE_URL=http://localhost:5173
 SMTP_ENABLED=false
 ```
 
+## Back-end setup and run
+
+1. Go to the backend folder:
+
+```bash
+cd backend
+```
+
+2. Install dependencies:
+
+```bash
+npm install
+```
+
+3. Create `backend/.env` using the example values above, then update:
+- `MONGODB_URI` and `MONGODB_DB_NAME` for your database.
+- `JWT_SECRET` with a strong secret value.
+- `CORS_ORIGIN` to include your frontend origin.
+- Optional email/cloud upload variables if you need those features.
+
+4. Start the backend in development mode:
+
+```bash
+npm run dev
+```
+
+5. Start the backend in production mode:
+
+```bash
+npm run start
+```
+
+6. Run backend syntax checks:
+
+```bash
+npm run check
+```
+
+The backend listens on `PORT` (default `5000`) and serves API routes under `/api`.
+
+## API documentation
+
+Base URL (local): `http://localhost:5000/api`  
+Base URL (frontend in production): `/api`
+
+Authentication:
+- Protected endpoints require `Authorization: Bearer <token>`.
+- Token is returned by `POST /auth/login` and `POST /auth/verify-email`.
+
+Common error response format:
+
+```json
+{
+  "message": "Human-readable error message"
+}
+```
+
+### Health
+
+`GET /health`
+
+Example response (`200`):
+
+```json
+{
+  "message": "KMultaqa backend is running"
+}
+```
+
+### Auth
+
+`POST /auth/register`
+
+Example request:
+
+```json
+{
+  "name": "Student Name",
+  "email": "s202300001@kfupm.edu.sa",
+  "password": "StrongPass123",
+  "studentId": "s202300001",
+  "role": "student"
+}
+```
+
+Example response (`201`):
+
+```json
+{
+  "message": "Student registered successfully. Verify your email before logging in.",
+  "user": {
+    "id": "6639d6d89e1a0f2d1f3b4567",
+    "name": "Student Name",
+    "fullName": "Student Name",
+    "email": "s202300001@kfupm.edu.sa",
+    "role": "student",
+    "studentId": "s202300001",
+    "isVerified": false,
+    "isEmailVerified": false
+  }
+}
+```
+
+`POST /auth/login`
+
+Example request:
+
+```json
+{
+  "email": "s202300001@kfupm.edu.sa",
+  "password": "StrongPass123",
+  "role": "student"
+}
+```
+
+Example response (`200`):
+
+```json
+{
+  "message": "Login successful",
+  "token": "jwt-token-here",
+  "user": {
+    "id": "6639d6d89e1a0f2d1f3b4567",
+    "name": "Student Name",
+    "email": "s202300001@kfupm.edu.sa",
+    "role": "student",
+    "studentId": "s202300001",
+    "isVerified": true,
+    "isEmailVerified": true
+  }
+}
+```
+
+`POST /auth/verify-email`
+
+Example request:
+
+```json
+{
+  "code": "123456"
+}
+```
+
+Example response (`200`):
+
+```json
+{
+  "message": "Email verified successfully",
+  "token": "jwt-token-here",
+  "user": {
+    "id": "6639d6d89e1a0f2d1f3b4567",
+    "role": "student",
+    "email": "s202300001@kfupm.edu.sa",
+    "isVerified": true
+  }
+}
+```
+
+`GET /auth/me`
+
+Required header:
+
+```text
+Authorization: Bearer <token>
+```
+
+Example response (`200`):
+
+```json
+{
+  "user": {
+    "id": "6639d6d89e1a0f2d1f3b4567",
+    "name": "Student Name",
+    "role": "student",
+    "email": "s202300001@kfupm.edu.sa"
+  }
+}
+```
+
+### Notifications (student)
+
+`GET /notifications`
+
+Example response (`200`):
+
+```json
+{
+  "notifications": [
+    {
+      "id": "6640a53a9e1a0f2d1f3b9999",
+      "message": "Your registration was approved",
+      "type": "event-registration",
+      "targetId": "663f10009e1a0f2d1f3b8888",
+      "targetModel": "Event",
+      "isRead": false,
+      "createdAt": "2026-05-02T10:30:00.000Z"
+    }
+  ],
+  "unreadCount": 1
+}
+```
+
+`PATCH /notifications/read`
+
+Example response (`200`):
+
+```json
+{
+  "message": "Notifications marked as read",
+  "updatedCount": 3
+}
+```
+
+### Uploads (club/admin)
+
+`POST /uploads/image` (multipart/form-data)
+
+Form fields:
+- `image`: image file (`jpg`, `png`, `webp`, or `gif`, up to 5MB).
+- `folder` (optional): `clubs`, `events`, or `posts`.
+
+Example response (`201`):
+
+```json
+{
+  "message": "Image uploaded",
+  "imageUrl": "https://res.cloudinary.com/.../image/upload/v123/example.png",
+  "publicId": "kmultaqa/posts/example"
+}
+```
+
+### Additional API modules
+
+- Admin routes: `/api/admin/*`
+- Club routes: `/api/club/*`
+- Student routes: `/api/student/*`
+
+For complete route coverage, see:
+- `backend/src/modules/admin/admin.routes.js`
+- `backend/src/modules/club/club.routes.js`
+- `backend/src/modules/student/student.routes.js`
+- `backend/src/modules/auth/auth.routes.js`
+- `backend/src/modules/notifications/notification.routes.js`
+- `backend/src/modules/uploads/upload.routes.js`
+
 ## Usage instructions and examples
 
 - Admin:
