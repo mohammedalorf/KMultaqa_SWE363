@@ -546,7 +546,7 @@ export default function ClubProfile() {
                 <SocialLinkIcons
                   socialLinks={form.socialLinks}
                   accentColor={accentColor}
-                  className="border-t border-[var(--border)] pt-5"
+                  className="pt-1"
                 />
               </div>
             </Card>
