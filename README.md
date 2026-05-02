@@ -64,6 +64,22 @@ npm run build
 npm run preview
 ```
 
+## Environment variables (example)
+
+Create `backend/.env` and adjust values for your setup:
+
+```bash
+NODE_ENV=development
+PORT=5000
+MONGODB_URI=mongodb://127.0.0.1:27017
+MONGODB_DB_NAME=kmultaqa
+JWT_SECRET=replace-with-a-long-random-secret
+CORS_ORIGIN=http://localhost:5173,http://127.0.0.1:5173
+APP_BASE_URL=http://localhost:5000
+FRONTEND_BASE_URL=http://localhost:5173
+SMTP_ENABLED=false
+```
+
 ## Usage instructions and examples
 
 Admin logs in at /admin/login to manage clubs, reports, and announcements.
