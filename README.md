@@ -333,7 +333,7 @@ Example response (`201`):
 
 Main implemented routes:
 - Admin: `GET /admin/dashboard`, `GET /admin/club-requests`, `PATCH /admin/club-requests/:requestId`, `GET /admin/clubs`, `PATCH /admin/clubs/:clubId/status`, `GET /admin/reports`, `PATCH /admin/reports/:reportId`, `GET|POST|DELETE /admin/announcements`, `GET /admin/exports/:type`.
-
+- Club: `POST /club/requests`, `GET /club/dashboard`, `GET|PATCH /club/profile`, `GET|POST /club/posts`, `GET|PATCH|DELETE /club/posts/:postId`, `GET|POST /club/events`, `GET|PATCH|DELETE /club/events/:eventId`, `GET|PATCH /club/events/:eventId/registrations`, `GET /club/followers`.
 For complete route coverage, see:
 - `backend/src/modules/admin/admin.routes.js`
 - `backend/src/modules/club/club.routes.js`
