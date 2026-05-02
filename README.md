@@ -334,6 +334,8 @@ Example response (`201`):
 Main implemented routes:
 - Admin: `GET /admin/dashboard`, `GET /admin/club-requests`, `PATCH /admin/club-requests/:requestId`, `GET /admin/clubs`, `PATCH /admin/clubs/:clubId/status`, `GET /admin/reports`, `PATCH /admin/reports/:reportId`, `GET|POST|DELETE /admin/announcements`, `GET /admin/exports/:type`.
 - Club: `POST /club/requests`, `GET /club/dashboard`, `GET|PATCH /club/profile`, `GET|POST /club/posts`, `GET|PATCH|DELETE /club/posts/:postId`, `GET|POST /club/events`, `GET|PATCH|DELETE /club/events/:eventId`, `GET|PATCH /club/events/:eventId/registrations`, `GET /club/followers`.
+- Student: `GET /student/dashboard`, `GET|PATCH /student/settings`, `GET /student/clubs`, `GET /student/clubs/:clubId`, `POST|DELETE /student/clubs/:clubId/follow`, `PATCH /student/clubs/:clubId/notifications`, `POST|DELETE /student/posts/:postId/like`, `POST /student/reports`, `GET /student/events/registrations`, `GET /student/events/:eventId`, `POST /student/events/:eventId/register`, `DELETE /student/events/:eventId/registration`.
+
 For complete route coverage, see:
 - `backend/src/modules/admin/admin.routes.js`
 - `backend/src/modules/club/club.routes.js`
