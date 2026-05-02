@@ -130,6 +130,8 @@ npm run start
 npm run check
 ```
 
+From the project root, run `npm run build` to verify the frontend production build.
+
 The backend listens on `PORT` (default `5000`) and serves API routes under `/api`.
 
 ## API documentation
