@@ -1,5 +1,7 @@
 # KFUPM Multaqa Platform
 
+![KMultaqa Logo](public/logos/logo-horizontal.png)
+
 KFUPM Multaqa Platform is a web platform for managing student clubs, events, announcements, approvals, and student engagement. It provides separate dashboards for admins, clubs, and students.
 
 ## Live deployment
