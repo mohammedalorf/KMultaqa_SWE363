@@ -86,6 +86,12 @@ FRONTEND_BASE_URL=http://localhost:5173
 SMTP_ENABLED=false
 ```
 
+For local frontend-to-backend integration, create a project-root `.env` file:
+
+```bash
+VITE_API_BASE_URL=http://localhost:5000/api
+```
+
 ## Back-end setup and run
 
 1. Go to the backend folder:
