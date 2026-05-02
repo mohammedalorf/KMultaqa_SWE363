@@ -53,23 +53,29 @@ authRouter.post('/resend-verification', async (req, res, next) => {
   }
 });
 
-authRouter.get('/club/setup-password/:token', async (req, res, next) => {
-  try {
-    const result = await getClubPasswordSetup({ token: req.params.token });
-    res.status(200).json(result);
-  } catch (error) {
-    next(error);
+authRouter.get(
+  '/club/setup-password/:token',
+  async (req, res, next) => {
+    try {
+      const result = await getClubPasswordSetup({ token: req.params.token });
+      res.status(200).json(result);
+    } catch (error) {
+      next(error);
+    }
   }
-});
+);
 
-authRouter.post('/club/setup-password', async (req, res, next) => {
-  try {
-    const result = await setupClubPassword(req.body);
-    res.status(200).json(result);
-  } catch (error) {
-    next(error);
+authRouter.post(
+  '/club/setup-password',
+  async (req, res, next) => {
+    try {
+      const result = await setupClubPassword(req.body);
+      res.status(200).json(result);
+    } catch (error) {
+      next(error);
+    }
   }
-});
+);
 
 authRouter.get('/me', requireAuth, (req, res) => {
   res.status(200).json({
