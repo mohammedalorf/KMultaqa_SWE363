@@ -18,6 +18,11 @@ src/
   main.jsx
 ```
 
+## Prerequisites
+
+- Node.js 18 or later
+- npm 9 or later
+- MongoDB (local or hosted)
 
 ## Run locally
 
