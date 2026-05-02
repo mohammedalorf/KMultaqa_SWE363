@@ -28,7 +28,13 @@ function escapeHtml(value) {
     .replace(/'/g, '&#39;');
 }
 
-export async function sendVerificationEmail({ to, name, code, token, expiresAt }) {
+export async function sendVerificationEmail({
+  to,
+  name,
+  code,
+  token,
+  expiresAt,
+}) {
   const verificationParam = token
     ? `token=${encodeURIComponent(token)}`
     : `code=${encodeURIComponent(code)}`;
@@ -75,7 +81,12 @@ export async function sendVerificationEmail({ to, name, code, token, expiresAt }
   return { sent: true, delivery: 'smtp' };
 }
 
-export async function sendClubPasswordSetupEmail({ to, clubName, token, expiresAt }) {
+export async function sendClubPasswordSetupEmail({
+  to,
+  clubName,
+  token,
+  expiresAt,
+}) {
   const setupUrl = `${env.frontendBaseUrl}/club/setup-password/${encodeURIComponent(token)}`;
   const expiresAtText = new Date(expiresAt).toLocaleString('en-US', {
     dateStyle: 'medium',
@@ -116,9 +127,18 @@ export async function sendClubPasswordSetupEmail({ to, clubName, token, expiresA
   return { sent: true, delivery: 'smtp' };
 }
 
-export async function sendClubRequestRejectionEmail({ to, clubName, representativeName, adminNote }) {
+export async function sendClubRequestRejectionEmail({
+  to,
+  clubName,
+  representativeName,
+  adminNote,
+}) {
   const recipients = Array.isArray(to)
-    ? [...new Set(to.filter(Boolean).map((email) => String(email).trim().toLowerCase()))]
+    ? [
+        ...new Set(
+          to.filter(Boolean).map((email) => String(email).trim().toLowerCase())
+        ),
+      ]
     : [String(to).trim().toLowerCase()].filter(Boolean);
   const note = adminNote || 'No additional note was provided.';
 
@@ -149,7 +169,11 @@ export async function sendClubRequestRejectionEmail({ to, clubName, representati
     ].join('\n'),
     html: `
       <p>Hello ${escapeHtml(representativeName)},</p>
-      <p>Your club registration request for <strong>${escapeHtml(clubName)}</strong> was not approved.</p>
+      <p>
+        Your club registration request for
+        <strong>${escapeHtml(clubName)}</strong>
+        was not approved.
+      </p>
       <p><strong>Admin note:</strong></p>
       <p>${escapeHtml(note)}</p>
       <p>You may revise your request and submit it again if appropriate.</p>
@@ -159,7 +183,14 @@ export async function sendClubRequestRejectionEmail({ to, clubName, representati
   return { sent: true, delivery: 'smtp', recipients };
 }
 
-export async function sendFollowerContentEmail({ to, studentName, clubName, contentType, title, targetUrl }) {
+export async function sendFollowerContentEmail({
+  to,
+  studentName,
+  clubName,
+  contentType,
+  title,
+  targetUrl,
+}) {
   const recipient = String(to ?? '').trim().toLowerCase();
 
   if (!recipient) {
@@ -201,7 +232,13 @@ export async function sendFollowerContentEmail({ to, studentName, clubName, cont
   return { sent: true, delivery: 'smtp', recipient };
 }
 
-export async function sendClubWarningEmail({ to, clubName, warningType, message, evidenceReference }) {
+export async function sendClubWarningEmail({
+  to,
+  clubName,
+  warningType,
+  message,
+  evidenceReference,
+}) {
   const recipient = String(to ?? '').trim().toLowerCase();
 
   if (!recipient) {
@@ -249,7 +286,12 @@ export async function sendClubWarningEmail({ to, clubName, warningType, message,
   return { sent: true, delivery: 'smtp', recipient };
 }
 
-export async function sendClubStatusEmail({ to, clubName, status, reason }) {
+export async function sendClubStatusEmail({
+  to,
+  clubName,
+  status,
+  reason,
+}) {
   const recipient = String(to ?? '').trim().toLowerCase();
 
   if (!recipient) {
@@ -293,7 +335,13 @@ export async function sendClubStatusEmail({ to, clubName, status, reason }) {
   return { sent: true, delivery: 'smtp', recipient };
 }
 
-export async function sendAppealDecisionEmail({ to, requesterName, appealType, decision, explanation }) {
+export async function sendAppealDecisionEmail({
+  to,
+  requesterName,
+  appealType,
+  decision,
+  explanation,
+}) {
   const recipient = String(to ?? '').trim().toLowerCase();
 
   if (!recipient) {
@@ -336,7 +384,12 @@ export async function sendAppealDecisionEmail({ to, requesterName, appealType, d
   return { sent: true, delivery: 'smtp', recipient };
 }
 
-export async function sendPlatformAnnouncementEmail({ to, recipientName, title, message }) {
+export async function sendPlatformAnnouncementEmail({
+  to,
+  recipientName,
+  title,
+  message,
+}) {
   const recipient = String(to ?? '').trim().toLowerCase();
 
   if (!recipient) {
