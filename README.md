@@ -2,7 +2,6 @@
 
 KFUPM Multaqa Platform is a web platform for managing student clubs, events, announcements, approvals, and student engagement. It provides separate dashboards for admins, clubs, and students.
 
-
 ## Folder structure
 
 ```text
@@ -81,7 +80,6 @@ Students log in at /student/login to explore clubs, view events, and manage thei
 - `/student/event/:id`
 - `/student/settings`
 - `/student/my-events`
-
 
 ## Team Members
 - Abdulmalik Al AlShaikh
