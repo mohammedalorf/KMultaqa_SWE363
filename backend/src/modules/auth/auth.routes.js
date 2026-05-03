@@ -41,7 +41,11 @@ async function handleVerifyEmail(req, res, next) {
   }
 }
 
-authRouter.get('/verify-email', handleVerifyEmail);
+authRouter.get('/verify-email', (_req, res) => {
+  res.status(405).json({
+    message: 'Open the app verification page and submit the code from the email.',
+  });
+});
 authRouter.post('/verify-email', handleVerifyEmail);
 
 authRouter.post('/resend-verification', async (req, res, next) => {

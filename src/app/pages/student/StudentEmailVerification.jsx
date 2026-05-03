@@ -14,12 +14,14 @@ const CODE_LENGTH = 6;
 export default function StudentEmailVerification() {
   const location = useLocation();
   const navigate = useNavigate();
+  const searchParams = new URLSearchParams(location.search);
   const [code, setCode] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isResending, setIsResending] = useState(false);
   const [cooldown, setCooldown] = useState(0);
   const intervalRef = useRef(null);
   const email =
+    searchParams.get("email") ||
     location.state?.email ||
     localStorage.getItem("pendingVerificationEmail") ||
     "";

@@ -210,10 +210,8 @@ export async function sendVerificationEmail({
   token,
   expiresAt,
 }) {
-  const verificationParam = token
-    ? `token=${encodeURIComponent(token)}`
-    : `code=${encodeURIComponent(code)}`;
-  const verificationUrl = `${env.appBaseUrl}/api/auth/verify-email?${verificationParam}`;
+  const verificationUrl =
+    `${env.frontendBaseUrl}/student/verify-email?email=${encodeURIComponent(to)}`;
   const expiresAtText = new Date(expiresAt).toLocaleString('en-US', {
     dateStyle: 'medium',
     timeStyle: 'short',
@@ -236,7 +234,7 @@ export async function sendVerificationEmail({
       '',
       `This code expires at ${expiresAtText}.`,
       '',
-      'You can also verify your email using this link:',
+      'Open the verification page here:',
       verificationUrl,
       '',
       'If you did not create this account, ignore this email.',
@@ -246,7 +244,7 @@ export async function sendVerificationEmail({
       <p>Your verification code is:</p>
       <p style="font-size: 24px; font-weight: 700; letter-spacing: 0.12em;">${escapeHtml(code)}</p>
       <p>This code expires at ${escapeHtml(expiresAtText)}.</p>
-      <p>You can also verify your email using this link:</p>
+      <p>Open the verification page here:</p>
       <p><a href="${escapeHtml(verificationUrl)}">${escapeHtml(verificationUrl)}</a></p>
       <p>If you did not create this account, ignore this email.</p>
     `,
