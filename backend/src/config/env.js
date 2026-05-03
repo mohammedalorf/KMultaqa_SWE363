@@ -76,10 +76,21 @@ const jwtSecret = getEnv('JWT_SECRET', 'replace-with-a-long-random-secret');
 const smtpEnabled = getBooleanEnv('SMTP_ENABLED', false);
 const smtpUser = getEnv('SMTP_USER');
 const smtpPass = getEnv('SMTP_PASS');
+const smtpFrom = getEnv('SMTP_FROM', 'KMultaqa <no-reply@kmultaqa.local>');
+const gmailApiEnabled = getBooleanEnv('GMAIL_API_ENABLED', false);
+const emailDelivery = getEnv(
+  'EMAIL_DELIVERY',
+  gmailApiEnabled ? 'gmail-api' : smtpEnabled ? 'smtp' : 'console'
+).toLowerCase();
+const gmailApiUser = getEnv('GMAIL_USER', smtpUser);
+const gmailApiClientId = getEnv('GMAIL_CLIENT_ID');
+const gmailApiClientSecret = getEnv('GMAIL_CLIENT_SECRET');
+const gmailApiRefreshToken = getEnv('GMAIL_REFRESH_TOKEN');
 const corsOrigins = getCorsOrigins();
 const cloudinaryCloudName = getEnv('CLOUDINARY_CLOUD_NAME');
 const cloudinaryApiKey = getEnv('CLOUDINARY_API_KEY');
 const cloudinaryApiSecret = getEnv('CLOUDINARY_API_SECRET');
+const supportedEmailDeliveries = ['console', 'smtp', 'gmail-api'];
 
 if (
   nodeEnv === 'production'
@@ -88,8 +99,26 @@ if (
   throw new Error('JWT_SECRET must be configured in production');
 }
 
-if (smtpEnabled && (!smtpUser || !smtpPass)) {
-  throw new Error('SMTP_USER and SMTP_PASS are required when SMTP_ENABLED=true');
+if (!supportedEmailDeliveries.includes(emailDelivery)) {
+  throw new Error('EMAIL_DELIVERY must be one of: console, smtp, gmail-api');
+}
+
+if (emailDelivery === 'smtp' && (!smtpUser || !smtpPass)) {
+  throw new Error('SMTP_USER and SMTP_PASS are required when EMAIL_DELIVERY=smtp');
+}
+
+if (
+  emailDelivery === 'gmail-api'
+  && (
+    !gmailApiUser
+    || !gmailApiClientId
+    || !gmailApiClientSecret
+    || !gmailApiRefreshToken
+  )
+) {
+  throw new Error(
+    'GMAIL_USER, GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET, and GMAIL_REFRESH_TOKEN are required when EMAIL_DELIVERY=gmail-api'
+  );
 }
 
 export const env = {
@@ -105,14 +134,25 @@ export const env = {
     corsOrigins[0] ?? 'http://localhost:5173'
   ),
   corsOrigins,
+  email: {
+    delivery: emailDelivery,
+  },
   smtp: {
-    enabled: smtpEnabled,
+    enabled: emailDelivery === 'smtp',
     host: getEnv('SMTP_HOST', 'smtp.gmail.com'),
     port: getNumberEnv('SMTP_PORT', 587),
     secure: getBooleanEnv('SMTP_SECURE', false),
     user: smtpUser,
     pass: smtpPass,
-    from: getEnv('SMTP_FROM', 'KMultaqa <no-reply@kmultaqa.local>'),
+    from: smtpFrom,
+  },
+  gmailApi: {
+    enabled: emailDelivery === 'gmail-api',
+    user: gmailApiUser,
+    clientId: gmailApiClientId,
+    clientSecret: gmailApiClientSecret,
+    refreshToken: gmailApiRefreshToken,
+    from: getEnv('GMAIL_FROM', smtpFrom),
   },
   cloudinary: {
     cloudName: cloudinaryCloudName,

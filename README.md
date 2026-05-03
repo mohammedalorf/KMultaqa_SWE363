@@ -83,7 +83,7 @@ JWT_SECRET=replace-with-a-long-random-secret
 CORS_ORIGIN=http://localhost:5173,http://127.0.0.1:5173
 APP_BASE_URL=http://localhost:5000
 FRONTEND_BASE_URL=http://localhost:5173
-SMTP_ENABLED=false
+EMAIL_DELIVERY=console
 ```
 
 For local frontend-to-backend integration, create a project-root `.env` file:
@@ -111,6 +111,29 @@ npm install
 - `JWT_SECRET` with a strong secret value.
 - `CORS_ORIGIN` to include your frontend origin.
 - Optional email/cloud upload variables if you need those features.
+
+For Render free-tier email delivery, use Gmail API instead of SMTP:
+
+```bash
+EMAIL_DELIVERY=gmail-api
+GMAIL_USER=your-gmail-address@gmail.com
+GMAIL_CLIENT_ID=your-google-oauth-client-id
+GMAIL_CLIENT_SECRET=your-google-oauth-client-secret
+GMAIL_REFRESH_TOKEN=your-google-oauth-refresh-token
+GMAIL_FROM=KMultaqa <your-gmail-address@gmail.com>
+```
+
+SMTP is still supported for local or paid hosts:
+
+```bash
+EMAIL_DELIVERY=smtp
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=your-gmail-address@gmail.com
+SMTP_PASS=your-google-app-password
+SMTP_FROM=KMultaqa <your-gmail-address@gmail.com>
+```
 
 4. Start the backend in development mode:
 
@@ -406,7 +429,7 @@ Student:
 - Database connection errors:
   Confirm `MONGODB_URI` and `MONGODB_DB_NAME` are valid and that MongoDB is running.
 - No emails are being sent:
-  Set `SMTP_ENABLED=true` and configure `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, and `SMTP_FROM`.
+  Set `EMAIL_DELIVERY=gmail-api` and configure `GMAIL_USER`, `GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`, `GMAIL_REFRESH_TOKEN`, and `GMAIL_FROM`. On Render free-tier, do not use SMTP because outbound SMTP ports are blocked.
 
 ## Team Members
 - Abdulmalik Al AlShaikh

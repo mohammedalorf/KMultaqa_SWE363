@@ -51,7 +51,10 @@ function buildTargetUrl(targetModel, targetId) {
 function summarizeEmailResults(results) {
   return results.reduce(
     (summary, result) => {
-      if (result.status === 'fulfilled' && ['smtp', 'console'].includes(result.value?.delivery)) {
+      if (
+        result.status === 'fulfilled'
+        && ['smtp', 'gmail-api', 'console'].includes(result.value?.delivery)
+      ) {
         summary.sent += 1;
       } else {
         summary.failed += 1;

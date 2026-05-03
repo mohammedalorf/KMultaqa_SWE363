@@ -1,11 +1,16 @@
 import nodemailer from 'nodemailer';
 import { env } from '../config/env.js';
 
-let transporter;
+const gmailTokenUrl = 'https://oauth2.googleapis.com/token';
+const gmailMessagesUrl = 'https://gmail.googleapis.com/gmail/v1/users';
 
-function getTransporter() {
-  if (!transporter) {
-    transporter = nodemailer.createTransport({
+let smtpTransporter;
+let gmailAccessToken = '';
+let gmailAccessTokenExpiresAt = 0;
+
+function getSmtpTransporter() {
+  if (!smtpTransporter) {
+    smtpTransporter = nodemailer.createTransport({
       host: env.smtp.host,
       port: env.smtp.port,
       secure: env.smtp.secure,
@@ -16,7 +21,177 @@ function getTransporter() {
     });
   }
 
-  return transporter;
+  return smtpTransporter;
+}
+
+function isConsoleDelivery() {
+  return env.email.delivery === 'console';
+}
+
+function normalizeRecipients(to) {
+  if (Array.isArray(to)) {
+    return to.map((email) => String(email).trim()).filter(Boolean);
+  }
+
+  return [String(to ?? '').trim()].filter(Boolean);
+}
+
+function sanitizeHeader(value) {
+  return String(value ?? '').replace(/[\r\n]+/g, ' ').trim();
+}
+
+function encodeHeader(value) {
+  const sanitized = sanitizeHeader(value);
+
+  if (/^[\x00-\x7F]*$/.test(sanitized)) {
+    return sanitized;
+  }
+
+  return `=?UTF-8?B?${Buffer.from(sanitized, 'utf8').toString('base64')}?=`;
+}
+
+function normalizeBody(value) {
+  return String(value ?? '').replace(/\r?\n/g, '\r\n');
+}
+
+function toBase64Url(value) {
+  return Buffer.from(value, 'utf8')
+    .toString('base64')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/g, '');
+}
+
+function buildRawEmail({ from, to, subject, text, html }) {
+  const recipients = normalizeRecipients(to);
+
+  if (recipients.length === 0) {
+    throw new Error('Email recipient is required');
+  }
+
+  const boundary = `kmultaqa_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+  const headers = [
+    `From: ${sanitizeHeader(from)}`,
+    `To: ${recipients.map(sanitizeHeader).join(', ')}`,
+    `Subject: ${encodeHeader(subject)}`,
+    'MIME-Version: 1.0',
+    `Content-Type: multipart/alternative; boundary="${boundary}"`,
+  ];
+  const textPart = [
+    `--${boundary}`,
+    'Content-Type: text/plain; charset="UTF-8"',
+    'Content-Transfer-Encoding: 8bit',
+    '',
+    normalizeBody(text),
+  ];
+  const htmlPart = [
+    `--${boundary}`,
+    'Content-Type: text/html; charset="UTF-8"',
+    'Content-Transfer-Encoding: 8bit',
+    '',
+    normalizeBody(html),
+    `--${boundary}--`,
+  ];
+
+  return [...headers, '', ...textPart, ...htmlPart, ''].join('\r\n');
+}
+
+async function readJsonResponse(response) {
+  const text = await response.text();
+
+  if (!text) {
+    return {};
+  }
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    return { error: text };
+  }
+}
+
+function buildHttpError(prefix, response, data) {
+  const message =
+    data?.error?.message
+    || data?.error_description
+    || data?.error
+    || response.statusText;
+
+  return new Error(`${prefix} (${response.status}): ${message}`);
+}
+
+async function getGmailAccessToken() {
+  if (gmailAccessToken && gmailAccessTokenExpiresAt > Date.now() + 60000) {
+    return gmailAccessToken;
+  }
+
+  const response = await fetch(gmailTokenUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: new URLSearchParams({
+      client_id: env.gmailApi.clientId,
+      client_secret: env.gmailApi.clientSecret,
+      refresh_token: env.gmailApi.refreshToken,
+      grant_type: 'refresh_token',
+    }),
+  });
+  const data = await readJsonResponse(response);
+
+  if (!response.ok) {
+    throw buildHttpError('Gmail access token request failed', response, data);
+  }
+
+  gmailAccessToken = data.access_token;
+  gmailAccessTokenExpiresAt =
+    Date.now() + Math.max(Number(data.expires_in ?? 3600) - 60, 0) * 1000;
+
+  return gmailAccessToken;
+}
+
+async function sendWithGmailApi(message) {
+  const accessToken = await getGmailAccessToken();
+  const raw = toBase64Url(buildRawEmail({
+    ...message,
+    from: env.gmailApi.from,
+  }));
+  const userId = encodeURIComponent(env.gmailApi.user);
+  const response = await fetch(`${gmailMessagesUrl}/${userId}/messages/send`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ raw }),
+  });
+  const data = await readJsonResponse(response);
+
+  if (!response.ok) {
+    throw buildHttpError('Gmail message send failed', response, data);
+  }
+
+  return { sent: true, delivery: 'gmail-api', id: data.id };
+}
+
+async function sendEmail({ to, subject, text, html }) {
+  if (isConsoleDelivery()) {
+    return { sent: false, delivery: 'console' };
+  }
+
+  if (env.email.delivery === 'gmail-api') {
+    return sendWithGmailApi({ to, subject, text, html });
+  }
+
+  await getSmtpTransporter().sendMail({
+    from: env.smtp.from,
+    to,
+    subject,
+    text,
+    html,
+  });
+
+  return { sent: true, delivery: 'smtp' };
 }
 
 function escapeHtml(value) {
@@ -44,14 +219,13 @@ export async function sendVerificationEmail({
     timeStyle: 'short',
   });
 
-  if (!env.smtp.enabled) {
+  if (isConsoleDelivery()) {
     console.log(`Verification code for ${to}: ${code}`);
     console.log(`Verification link for ${to}: ${verificationUrl}`);
     return { sent: false, delivery: 'console' };
   }
 
-  await getTransporter().sendMail({
-    from: env.smtp.from,
+  return sendEmail({
     to,
     subject: 'Verify your KMultaqa email',
     text: [
@@ -77,8 +251,6 @@ export async function sendVerificationEmail({
       <p>If you did not create this account, ignore this email.</p>
     `,
   });
-
-  return { sent: true, delivery: 'smtp' };
 }
 
 export async function sendClubPasswordSetupEmail({
@@ -93,13 +265,12 @@ export async function sendClubPasswordSetupEmail({
     timeStyle: 'short',
   });
 
-  if (!env.smtp.enabled) {
+  if (isConsoleDelivery()) {
     console.log(`Club password setup link for ${to}: ${setupUrl}`);
     return { sent: false, delivery: 'console' };
   }
 
-  await getTransporter().sendMail({
-    from: env.smtp.from,
+  return sendEmail({
     to,
     subject: 'Set your KMultaqa club password',
     text: [
@@ -123,8 +294,6 @@ export async function sendClubPasswordSetupEmail({
       <p>If you did not request this club account, ignore this email.</p>
     `,
   });
-
-  return { sent: true, delivery: 'smtp' };
 }
 
 export async function sendClubRequestRejectionEmail({
@@ -146,15 +315,14 @@ export async function sendClubRequestRejectionEmail({
     return { sent: false, delivery: 'none', recipients: [] };
   }
 
-  if (!env.smtp.enabled) {
+  if (isConsoleDelivery()) {
     console.log(`Club request rejection email for ${recipients.join(', ')}`);
     console.log(`Club: ${clubName}`);
     console.log(`Admin note: ${note}`);
     return { sent: false, delivery: 'console', recipients };
   }
 
-  await getTransporter().sendMail({
-    from: env.smtp.from,
+  const delivery = await sendEmail({
     to: recipients,
     subject: 'KMultaqa club request update',
     text: [
@@ -180,7 +348,7 @@ export async function sendClubRequestRejectionEmail({
     `,
   });
 
-  return { sent: true, delivery: 'smtp', recipients };
+  return { ...delivery, recipients };
 }
 
 export async function sendFollowerContentEmail({
@@ -197,7 +365,7 @@ export async function sendFollowerContentEmail({
     return { sent: false, delivery: 'none', recipient: '' };
   }
 
-  if (!env.smtp.enabled) {
+  if (isConsoleDelivery()) {
     console.log(`Follower ${contentType} notification for ${recipient}`);
     console.log(`Club: ${clubName}`);
     console.log(`Title: ${title}`);
@@ -205,8 +373,7 @@ export async function sendFollowerContentEmail({
     return { sent: false, delivery: 'console', recipient };
   }
 
-  await getTransporter().sendMail({
-    from: env.smtp.from,
+  const delivery = await sendEmail({
     to: recipient,
     subject: `New ${contentType} from ${clubName}`,
     text: [
@@ -229,7 +396,7 @@ export async function sendFollowerContentEmail({
     `,
   });
 
-  return { sent: true, delivery: 'smtp', recipient };
+  return { ...delivery, recipient };
 }
 
 export async function sendClubWarningEmail({
@@ -247,7 +414,7 @@ export async function sendClubWarningEmail({
 
   const evidenceText = evidenceReference || 'No evidence reference was provided.';
 
-  if (!env.smtp.enabled) {
+  if (isConsoleDelivery()) {
     console.log(`Club warning email for ${recipient}`);
     console.log(`Club: ${clubName}`);
     console.log(`Warning type: ${warningType}`);
@@ -256,8 +423,7 @@ export async function sendClubWarningEmail({
     return { sent: false, delivery: 'console', recipient };
   }
 
-  await getTransporter().sendMail({
-    from: env.smtp.from,
+  const delivery = await sendEmail({
     to: recipient,
     subject: 'KMultaqa club warning notice',
     text: [
@@ -283,7 +449,7 @@ export async function sendClubWarningEmail({
     `,
   });
 
-  return { sent: true, delivery: 'smtp', recipient };
+  return { ...delivery, recipient };
 }
 
 export async function sendClubStatusEmail({
@@ -301,7 +467,7 @@ export async function sendClubStatusEmail({
   const statusLabel = status === 'suspended' ? 'suspended' : 'reactivated';
   const reasonText = reason || 'No additional note was provided.';
 
-  if (!env.smtp.enabled) {
+  if (isConsoleDelivery()) {
     console.log(`Club status email for ${recipient}`);
     console.log(`Club: ${clubName}`);
     console.log(`Status: ${statusLabel}`);
@@ -309,8 +475,7 @@ export async function sendClubStatusEmail({
     return { sent: false, delivery: 'console', recipient };
   }
 
-  await getTransporter().sendMail({
-    from: env.smtp.from,
+  const delivery = await sendEmail({
     to: recipient,
     subject: `KMultaqa club account ${statusLabel}`,
     text: [
@@ -332,7 +497,7 @@ export async function sendClubStatusEmail({
     `,
   });
 
-  return { sent: true, delivery: 'smtp', recipient };
+  return { ...delivery, recipient };
 }
 
 export async function sendAppealDecisionEmail({
@@ -350,7 +515,7 @@ export async function sendAppealDecisionEmail({
 
   const name = requesterName || 'there';
 
-  if (!env.smtp.enabled) {
+  if (isConsoleDelivery()) {
     console.log(`Appeal decision email for ${recipient}`);
     console.log(`Appeal type: ${appealType}`);
     console.log(`Decision: ${decision}`);
@@ -358,8 +523,7 @@ export async function sendAppealDecisionEmail({
     return { sent: false, delivery: 'console', recipient };
   }
 
-  await getTransporter().sendMail({
-    from: env.smtp.from,
+  const delivery = await sendEmail({
     to: recipient,
     subject: 'KMultaqa appeal decision',
     text: [
@@ -381,7 +545,7 @@ export async function sendAppealDecisionEmail({
     `,
   });
 
-  return { sent: true, delivery: 'smtp', recipient };
+  return { ...delivery, recipient };
 }
 
 export async function sendPlatformAnnouncementEmail({
@@ -398,14 +562,13 @@ export async function sendPlatformAnnouncementEmail({
 
   const name = recipientName || 'there';
 
-  if (!env.smtp.enabled) {
+  if (isConsoleDelivery()) {
     console.log(`Platform announcement email for ${recipient}`);
     console.log(`Title: ${title}`);
     return { sent: false, delivery: 'console', recipient };
   }
 
-  await getTransporter().sendMail({
-    from: env.smtp.from,
+  const delivery = await sendEmail({
     to: recipient,
     subject: title,
     text: [
@@ -422,5 +585,5 @@ export async function sendPlatformAnnouncementEmail({
     `,
   });
 
-  return { sent: true, delivery: 'smtp', recipient };
+  return { ...delivery, recipient };
 }
