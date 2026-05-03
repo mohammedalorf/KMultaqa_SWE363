@@ -203,6 +203,18 @@ function escapeHtml(value) {
     .replace(/'/g, '&#39;');
 }
 
+function formatEmailDateTime(value) {
+  return new Intl.DateTimeFormat('en-US', {
+    timeZone: env.appTimeZone,
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    timeZoneName: 'short',
+  }).format(new Date(value));
+}
+
 export async function sendVerificationEmail({
   to,
   name,
@@ -212,10 +224,7 @@ export async function sendVerificationEmail({
 }) {
   const verificationUrl =
     `${env.frontendBaseUrl}/student/verify-email?email=${encodeURIComponent(to)}`;
-  const expiresAtText = new Date(expiresAt).toLocaleString('en-US', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  });
+  const expiresAtText = formatEmailDateTime(expiresAt);
 
   if (isConsoleDelivery()) {
     console.log(`Verification code for ${to}: ${code}`);
@@ -258,10 +267,7 @@ export async function sendClubPasswordSetupEmail({
   expiresAt,
 }) {
   const setupUrl = `${env.frontendBaseUrl}/club/setup-password/${encodeURIComponent(token)}`;
-  const expiresAtText = new Date(expiresAt).toLocaleString('en-US', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  });
+  const expiresAtText = formatEmailDateTime(expiresAt);
 
   if (isConsoleDelivery()) {
     console.log(`Club password setup link for ${to}: ${setupUrl}`);

@@ -128,6 +128,7 @@ export const env = {
   databaseName: getEnv('MONGODB_DB_NAME', 'kmultaqa'),
   jwtSecret,
   jwtExpiresInSeconds: getNumberEnv('JWT_EXPIRES_IN_SECONDS', 86400),
+  appTimeZone: getEnv('APP_TIME_ZONE', 'Asia/Riyadh'),
   appBaseUrl: getEnv('APP_BASE_URL', 'http://localhost:5000'),
   frontendBaseUrl: getEnv(
     'FRONTEND_BASE_URL',
