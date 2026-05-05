@@ -13,9 +13,9 @@ const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const kfupmEmailPattern = /^[^\s@]+@kfupm\.edu\.sa$/i;
 const studentIdPattern = /^s\d{9}$/i;
 const authAccountFields =
-  'fullName clubName email studentId passwordHash isVerified status createdAt updatedAt';
+  'fullName clubName email studentId logoUrl passwordHash isVerified status createdAt updatedAt';
 const sessionAccountFields =
-  'fullName clubName email studentId isVerified status createdAt updatedAt';
+  'fullName clubName email studentId logoUrl isVerified status createdAt updatedAt';
 
 function requiredString(value, fieldName) {
   if (typeof value !== 'string' || value.trim() === '') {
@@ -95,6 +95,7 @@ export function sanitizeUser(account) {
     name: account.fullName ?? account.clubName,
     fullName: account.fullName,
     clubName: account.clubName,
+    logoUrl: account.logoUrl ?? null,
     email: account.email,
     role,
     studentId: account.studentId ?? null,

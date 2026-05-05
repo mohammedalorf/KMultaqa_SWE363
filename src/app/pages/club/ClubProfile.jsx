@@ -114,6 +114,24 @@ function buildForm(club) {
   };
 }
 
+function syncStoredClubSession(club) {
+  try {
+    const storedUser = JSON.parse(localStorage.getItem("authUser") || "null") || {};
+    localStorage.setItem(
+      "authUser",
+      JSON.stringify({
+        ...storedUser,
+        name: club.clubName,
+        clubName: club.clubName,
+        logoUrl: club.logoUrl || "",
+      })
+    );
+    window.dispatchEvent(new Event("kmultaqa:auth-user-updated"));
+  } catch {
+    // Profile updates should still succeed if localStorage is unavailable.
+  }
+}
+
 function ClubAvatar({ logoUrl, name, logoShape = "circle", hero = false }) {
   const sizeClass = hero ? "h-[100px] w-[100px] text-4xl" : "h-12 w-12 text-base";
   const borderClass = hero ? "border-4 border-white shadow-[var(--shadow-md)]" : "";
@@ -315,6 +333,7 @@ export default function ClubProfile() {
 
       setForm(nextForm);
       setSavedForm(nextForm);
+      syncStoredClubSession(data.club);
       setStats((current) => ({
         ...current,
         followers: data.club?.followers ?? current.followers,

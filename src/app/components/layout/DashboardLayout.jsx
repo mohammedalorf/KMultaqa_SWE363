@@ -25,6 +25,29 @@ function buildBreadcrumb(pathname, sections, roleLabel, roleHome) {
   ];
 }
 
+function isImageLogo(value) {
+  return typeof value === "string" && /^(https?:\/\/|data:image\/|blob:|\/)/.test(value);
+}
+
+function UserAvatar({ userLogo, userName, roleAccent, className = "" }) {
+  const fallback = userName?.charAt(0) || "U";
+  const baseClass = `w-8 h-8 rounded-full ${roleAccent} flex items-center justify-center font-semibold text-sm shrink-0 leading-none overflow-hidden ${className}`;
+
+  if (isImageLogo(userLogo)) {
+    return (
+      <div className={baseClass}>
+        <img src={userLogo} alt="" className="w-full h-full object-cover" />
+      </div>
+    );
+  }
+
+  return (
+    <div className={baseClass}>
+      {userLogo || fallback}
+    </div>
+  );
+}
+
 function SidebarContent({ sections, pathname, userName, userLogo, roleLabel, roleAccent, onLogout, onNavigate }) {
   return (
     <>
@@ -80,9 +103,7 @@ function SidebarContent({ sections, pathname, userName, userLogo, roleLabel, rol
       {/* User footer */}
       <div className="border-t border-[var(--sidebar-border)] p-3 shrink-0">
         <div className="flex items-center gap-3 px-2.5 py-2.5 rounded-lg bg-[var(--accent)]/60 mb-1">
-          <div className={`w-8 h-8 rounded-full ${roleAccent} flex items-center justify-center font-semibold text-sm shrink-0 leading-none`}>
-            {userLogo || userName?.charAt(0) || "U"}
-          </div>
+          <UserAvatar userLogo={userLogo} userName={userName} roleAccent={roleAccent} />
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium truncate text-[var(--foreground)] leading-tight">{userName}</p>
             <p className="text-[11px] text-[var(--muted-foreground)] capitalize truncate mt-0.5">{roleLabel}</p>
@@ -415,9 +436,7 @@ export function DashboardLayout({ role, userName, userLogo, sidebarItems, childr
                 )}
               </div>
             )}
-            <div className={`hidden sm:flex items-center justify-center w-8 h-8 rounded-full ${roleAccent} font-semibold text-sm shrink-0`}>
-              {userLogo || userName?.charAt(0) || "U"}
-            </div>
+            <UserAvatar userLogo={userLogo} userName={userName} roleAccent={roleAccent} className="hidden sm:flex" />
           </div>
         </div>
 
