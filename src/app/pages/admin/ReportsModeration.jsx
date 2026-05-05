@@ -25,11 +25,33 @@ function reportStatusVariant(status) {
 
 const moderationActions = {
   dismiss: "Dismiss report",
-  hide: "Hide content",
-  remove: "Remove content",
+  hide: "Hide post",
+  cancel: "Cancel event",
   warn: "Warn club",
   suspend: "Suspend club",
 };
+
+function getDefaultModerationAction(report) {
+  if (report?.targetModel === "Post") return "hide";
+  if (report?.targetModel === "Event") return "cancel";
+  return "warn";
+}
+
+function getAvailableModerationActions(report) {
+  const actions = [];
+
+  if (report?.targetModel === "Post") {
+    actions.push("hide");
+  }
+
+  if (report?.targetModel === "Event") {
+    actions.push("cancel");
+  }
+
+  actions.push("warn", "suspend", "dismiss");
+
+  return actions;
+}
 
 export default function ReportsModeration() {
   const [reports, setReports] = useState([]);
@@ -77,7 +99,7 @@ export default function ReportsModeration() {
 
   const handleViewReport = (report) => {
     setSelectedReport(report);
-    setModerationAction("hide");
+    setModerationAction(getDefaultModerationAction(report));
     setReasonCategory("");
     setWarningType("");
     setEvidenceReference("");
@@ -87,10 +109,16 @@ export default function ReportsModeration() {
   };
 
   const canApplyAction = selectedReport?.status === "pending";
+  const availableModerationActions = getAvailableModerationActions(selectedReport);
+  const needsPolicyReason = ["hide", "cancel"].includes(moderationAction);
 
   const validateModerationAction = () => {
-    if (["hide", "remove"].includes(moderationAction) && !reasonCategory) {
-      return "Choose a policy reason before hiding or removing content.";
+    if (!availableModerationActions.includes(moderationAction)) {
+      return "Choose an available moderation action for this report.";
+    }
+
+    if (needsPolicyReason && !reasonCategory) {
+      return "Choose a policy reason before applying this content action.";
     }
 
     if (moderationAction === "warn" && !warningType) {
@@ -307,16 +335,16 @@ export default function ReportsModeration() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="hide">Hide content</SelectItem>
-                      <SelectItem value="remove">Remove content</SelectItem>
-                      <SelectItem value="warn">Warn club</SelectItem>
-                      <SelectItem value="suspend">Suspend club</SelectItem>
-                      <SelectItem value="dismiss">Dismiss report</SelectItem>
+                      {availableModerationActions.map((action) => (
+                        <SelectItem key={action} value={action}>
+                          {moderationActions[action]}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
 
-                {["hide", "remove"].includes(moderationAction) && (
+                {needsPolicyReason && (
                   <div>
                     <Label>Policy Reason</Label>
                     <Select value={reasonCategory} onValueChange={setReasonCategory} disabled={!canApplyAction}>

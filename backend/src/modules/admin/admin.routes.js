@@ -245,7 +245,7 @@ async function notifyAppealRequester(appeal) {
 function normalizeModerationAction(value) {
   const action = typeof value === 'string' ? value.trim().toLowerCase() : 'dismiss';
 
-  if (!['dismiss', 'hide', 'remove', 'warn', 'suspend'].includes(action)) {
+  if (!['dismiss', 'hide', 'cancel', 'warn', 'suspend'].includes(action)) {
     throw createError(400, 'Moderation action is invalid');
   }
 
@@ -350,17 +350,17 @@ async function applyModerationAction(report, action, details) {
     return;
   }
 
-  if (report.targetModel === 'Post') {
+  if (action === 'hide' && report.targetModel === 'Post') {
     await Post.findByIdAndUpdate(report.target, { $set: { status: 'hidden' } });
     return;
   }
 
-  if (report.targetModel === 'Event') {
+  if (action === 'cancel' && report.targetModel === 'Event') {
     await Event.findByIdAndUpdate(report.target, { $set: { status: 'cancelled' } });
     return;
   }
 
-  throw createError(400, `${action} is only available for reported posts or events`);
+  throw createError(400, `${action} is not available for reported ${report.targetModel.toLowerCase()} items`);
 }
 
 function getPasswordSetupExpiryDate() {
@@ -891,8 +891,8 @@ adminRouter.patch('/reports/:reportId', requireAuth, requireRole('admin'), async
       throw createError(400, 'Resolved reports require a moderation action');
     }
 
-    if (['hide', 'remove'].includes(action) && !reasonCategory) {
-      throw createError(400, 'Reason category is required for hide/remove actions');
+    if (['hide', 'cancel'].includes(action) && !reasonCategory) {
+      throw createError(400, 'Reason category is required for hide/cancel actions');
     }
 
     if (action === 'warn' && (!warningType || !adminNote)) {
