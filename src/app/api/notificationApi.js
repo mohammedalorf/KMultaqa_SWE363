@@ -7,3 +7,7 @@ export function getNotifications() {
 export function markNotificationsRead() {
   return apiClient.patch("/notifications/read");
 }
+
+export function deleteNotifications() {
+  return apiClient.delete("/notifications");
+}

@@ -2,7 +2,10 @@ import Club from '../../models/Club.js';
 import Notification from '../../models/Notification.js';
 import Student from '../../models/Student.js';
 import { env } from '../config/env.js';
-import { sendFollowerContentEmail } from './email.js';
+import {
+  sendFollowerContentEmail,
+  sendRegistrationDecisionEmail,
+} from './email.js';
 
 function buildNotificationMessage(type, clubName) {
   if (type === 'event') {
@@ -129,13 +132,18 @@ export async function notifyFollowersAboutClubContent({ clubId, targetId, target
 
 export async function notifyStudentAboutRegistrationDecision({ studentId, clubId, eventId, eventTitle, status }) {
   if (!studentId || !clubId || !eventId || !eventTitle || !status) {
-    return { notified: false };
+    return { notified: false, email: { sent: 0, failed: 0 } };
   }
 
-  const club = await Club.findById(clubId).select('clubName').lean();
+  const [club, student] = await Promise.all([
+    Club.findById(clubId).select('clubName').lean(),
+    Student.findById(studentId)
+      .select('_id fullName email isVerified notificationPreferences')
+      .lean(),
+  ]);
 
   if (!club) {
-    return { notified: false };
+    return { notified: false, email: { sent: 0, failed: 0 } };
   }
 
   const decisionText = status === 'registered' ? 'approved' : 'declined';
@@ -162,5 +170,24 @@ export async function notifyStudentAboutRegistrationDecision({ studentId, clubId
     { upsert: true, new: true }
   );
 
-  return { notified: true };
+  if (!student || !studentAllowsEmailNotification(student, clubId)) {
+    return { notified: true, email: { sent: 0, failed: 0 } };
+  }
+
+  const targetUrl = buildTargetUrl('Event', eventId);
+  const emailResults = await Promise.allSettled([
+    sendRegistrationDecisionEmail({
+      to: student.email,
+      studentName: student.fullName,
+      clubName: club.clubName,
+      eventTitle,
+      decision: status,
+      targetUrl,
+    }),
+  ]);
+  const email = summarizeEmailResults(emailResults);
+
+  console.log(`Registration decision email notification status for Event ${eventId}: ${email.sent} sent, ${email.failed} failed`);
+
+  return { notified: true, email };
 }

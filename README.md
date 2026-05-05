@@ -330,6 +330,17 @@ Example response (`200`):
 }
 ```
 
+`DELETE /notifications`
+
+Example response (`200`):
+
+```json
+{
+  "message": "Notifications deleted",
+  "deletedCount": 3
+}
+```
+
 ### Uploads (club/admin)
 
 `POST /uploads/image` (multipart/form-data)

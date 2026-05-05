@@ -59,6 +59,7 @@ function getClubPreference(student, clubId) {
 
 function serializeStudentSettings(student) {
   const followedClubs = (student.followedClubs ?? []).filter(Boolean);
+  const globalEmail = normalizeGlobalEmailPreference(student.notificationPreferences?.email);
 
   return {
     student: {
@@ -66,7 +67,7 @@ function serializeStudentSettings(student) {
       isVerified: Boolean(student.isVerified),
     },
     globalSettings: {
-      email: normalizeGlobalEmailPreference(student.notificationPreferences?.email),
+      email: globalEmail,
     },
     followedClubs: followedClubs.map((club) => {
       const preferences = getClubPreference(student, club._id);
@@ -76,7 +77,7 @@ function serializeStudentSettings(student) {
         clubName: club.clubName,
         logoUrl: club.logoUrl ?? null,
         category: club.category,
-        email: preferences.email,
+        email: globalEmail === 'off' ? false : preferences.email,
         inApp: preferences.inApp,
         notificationsEnabled: preferences.notificationsEnabled,
       };
@@ -371,16 +372,21 @@ studentRouter.patch('/settings', requireAuth, requireRole('student'), async (req
     const student = await Student.findById(req.user._id).select('followedClubs notificationPreferences');
     const followedClubIds = (student.followedClubs ?? []).map((id) => String(id));
     const requestedClubSettings = getRequestedClubSettings(req.body?.clubSettings);
+    const globalEmail = normalizeGlobalEmailPreference(req.body?.globalSettings?.email);
 
     student.notificationPreferences = {
-      email: normalizeGlobalEmailPreference(req.body?.globalSettings?.email),
+      email: globalEmail,
       clubs: followedClubIds.map((clubId) => {
         const existing = getClubPreference(student, clubId);
         const requested = requestedClubSettings[clubId] ?? {};
 
         return {
           club: clubId,
-          email: typeof requested.email === 'boolean' ? requested.email : existing.email,
+          email: globalEmail === 'off'
+            ? false
+            : typeof requested.email === 'boolean'
+              ? requested.email
+              : existing.email,
           inApp: typeof requested.inApp === 'boolean' ? requested.inApp : existing.inApp,
           notificationsEnabled:
             typeof requested.notificationsEnabled === 'boolean'

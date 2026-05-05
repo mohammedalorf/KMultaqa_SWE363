@@ -984,7 +984,7 @@ clubRouter.patch('/events/:eventId/registrations/:registrationId', requireAuth, 
     registration.cancelledAt = undefined;
     await registration.save();
 
-    await notifyStudentAboutRegistrationDecision({
+    const notificationDelivery = await notifyStudentAboutRegistrationDecision({
       studentId: registration.student._id,
       clubId: req.user._id,
       eventId: event._id,
@@ -994,6 +994,7 @@ clubRouter.patch('/events/:eventId/registrations/:registrationId', requireAuth, 
 
     res.status(200).json({
       message: status === 'registered' ? 'Registration approved' : 'Registration declined',
+      notificationDelivery,
       registration: serializeEventRegistration(registration),
     });
   } catch (error) {

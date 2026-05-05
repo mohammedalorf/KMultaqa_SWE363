@@ -403,6 +403,59 @@ export async function sendFollowerContentEmail({
   return { ...delivery, recipient };
 }
 
+export async function sendRegistrationDecisionEmail({
+  to,
+  studentName,
+  clubName,
+  eventTitle,
+  decision,
+  targetUrl,
+}) {
+  const recipient = String(to ?? '').trim().toLowerCase();
+
+  if (!recipient) {
+    return { sent: false, delivery: 'none', recipient: '' };
+  }
+
+  const name = studentName || 'there';
+  const decisionLabel = decision === 'registered' ? 'approved' : 'declined';
+
+  if (isConsoleDelivery()) {
+    console.log(`Registration ${decisionLabel} notification for ${recipient}`);
+    console.log(`Club: ${clubName}`);
+    console.log(`Event: ${eventTitle}`);
+    console.log(`Link: ${targetUrl}`);
+    return { sent: false, delivery: 'console', recipient };
+  }
+
+  const delivery = await sendEmail({
+    to: recipient,
+    subject: `Registration ${decisionLabel}: ${eventTitle}`,
+    text: [
+      `Hello ${name},`,
+      '',
+      `${clubName} ${decisionLabel} your registration request for ${eventTitle}.`,
+      '',
+      'Open the event here:',
+      targetUrl,
+      '',
+      'You are receiving this because your KMultaqa email notifications are enabled.',
+    ].join('\n'),
+    html: `
+      <p>Hello ${escapeHtml(name)},</p>
+      <p>
+        <strong>${escapeHtml(clubName)}</strong>
+        ${escapeHtml(decisionLabel)} your registration request for
+        <strong>${escapeHtml(eventTitle)}</strong>.
+      </p>
+      <p><a href="${escapeHtml(targetUrl)}">${escapeHtml(targetUrl)}</a></p>
+      <p>You are receiving this because your KMultaqa email notifications are enabled.</p>
+    `,
+  });
+
+  return { ...delivery, recipient };
+}
+
 export async function sendClubWarningEmail({
   to,
   clubName,

@@ -36,6 +36,7 @@ export default function NotificationSettings() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [unfollowingClubId, setUnfollowingClubId] = useState(null);
+  const globalEmailOff = globalSettings.email === "off";
 
   useEffect(() => {
     let cancelled = false;
@@ -73,7 +74,7 @@ export default function NotificationSettings() {
   }, []);
 
   const handleToggle = (clubId, type) => {
-    if (type === "email" && !emailVerified) {
+    if (type === "email" && (!emailVerified || globalEmailOff)) {
       return;
     }
 
@@ -85,6 +86,24 @@ export default function NotificationSettings() {
         [type]: !(prev[clubId]?.[type] ?? true),
       },
     }));
+  };
+
+  const handleGlobalEmailChange = (value) => {
+    setGlobalSettings((prev) => ({ ...prev, email: value }));
+
+    if (value === "off") {
+      setClubSettings((prev) => {
+        return Object.fromEntries(
+          Object.entries(prev).map(([clubId, settings]) => [
+            clubId,
+            {
+              ...settings,
+              email: false,
+            },
+          ])
+        );
+      });
+    }
   };
 
   const handleUnfollow = async (clubId) => {
@@ -153,7 +172,7 @@ export default function NotificationSettings() {
                 </div>
                 <Select
                   value={globalSettings.email}
-                  onValueChange={(value) => setGlobalSettings((prev) => ({ ...prev, email: value }))}
+                  onValueChange={handleGlobalEmailChange}
                   disabled={isLoading || !emailVerified}
                 >
                   <SelectTrigger className="w-32 shrink-0">
@@ -211,9 +230,9 @@ export default function NotificationSettings() {
                             <p className="text-xs text-[var(--muted-foreground)]">Get emails for new posts and events</p>
                           </div>
                           <Switch
-                            checked={clubSettings[clubId]?.email ?? true}
+                            checked={!globalEmailOff && (clubSettings[clubId]?.email ?? true)}
                             onCheckedChange={() => handleToggle(clubId, "email")}
-                            disabled={!emailVerified}
+                            disabled={!emailVerified || globalEmailOff}
                           />
                         </div>
                         <div className="flex items-center justify-between gap-4">

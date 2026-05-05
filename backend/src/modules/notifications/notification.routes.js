@@ -60,3 +60,21 @@ notificationRouter.patch(
     }
   }
 );
+
+notificationRouter.delete(
+  '/',
+  requireAuth,
+  requireRole('student'),
+  async (req, res, next) => {
+    try {
+      const result = await Notification.deleteMany({ student: req.user._id });
+
+      res.status(200).json({
+        message: 'Notifications deleted',
+        deletedCount: result.deletedCount,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);

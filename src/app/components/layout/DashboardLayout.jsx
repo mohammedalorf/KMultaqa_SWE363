@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { LogOut, Menu, X, Bell } from "lucide-react";
-import { getNotifications, markNotificationsRead } from "../../api/notificationApi";
+import { Bell, LogOut, Menu, Trash2, X } from "lucide-react";
+import { toast } from "sonner";
+import { getApiErrorMessage } from "../../api/apiClient";
+import { deleteNotifications, getNotifications, markNotificationsRead } from "../../api/notificationApi";
 
 function normalizeSections(sidebarItems) {
   if (!Array.isArray(sidebarItems) || sidebarItems.length === 0) return [];
@@ -106,14 +108,19 @@ export function DashboardLayout({ role, userName, userLogo, sidebarItems, childr
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [notificationsLoading, setNotificationsLoading] = useState(false);
+  const [notificationsDeleting, setNotificationsDeleting] = useState(false);
   const isStudent = role === "student";
   const notificationsOpenRef = useRef(false);
   const markingNotificationsReadRef = useRef(false);
+  const deletingNotificationsRef = useRef(false);
+  const notificationSyncVersionRef = useRef(0);
 
   const loadNotifications = useCallback(async ({ silent = false } = {}) => {
     if (!isStudent) {
       return;
     }
+
+    const syncVersion = notificationSyncVersionRef.current;
 
     if (!silent) {
       setNotificationsLoading(true);
@@ -122,13 +129,21 @@ export function DashboardLayout({ role, userName, userLogo, sidebarItems, childr
     try {
       const { data } = await getNotifications();
 
-      if (markingNotificationsReadRef.current) {
+      if (
+        markingNotificationsReadRef.current ||
+        deletingNotificationsRef.current ||
+        syncVersion !== notificationSyncVersionRef.current
+      ) {
         return;
       }
 
       setNotifications(data.notifications || []);
       setUnreadCount(data.unreadCount || 0);
     } catch {
+      if (deletingNotificationsRef.current || syncVersion !== notificationSyncVersionRef.current) {
+        return;
+      }
+
       setNotifications([]);
       setUnreadCount(0);
     } finally {
@@ -139,7 +154,7 @@ export function DashboardLayout({ role, userName, userLogo, sidebarItems, childr
   }, [isStudent]);
 
   const markNotificationsAsViewed = useCallback(async () => {
-    if (!isStudent || markingNotificationsReadRef.current) {
+    if (!isStudent || markingNotificationsReadRef.current || deletingNotificationsRef.current) {
       return;
     }
 
@@ -156,6 +171,32 @@ export function DashboardLayout({ role, userName, userLogo, sidebarItems, childr
       await loadNotifications({ silent: true });
     }
   }, [isStudent, loadNotifications]);
+
+  const handleDeleteNotifications = async () => {
+    if (!isStudent || notifications.length === 0 || notificationsDeleting) {
+      return;
+    }
+
+    deletingNotificationsRef.current = true;
+    notificationSyncVersionRef.current += 1;
+    setNotificationsDeleting(true);
+    setNotifications([]);
+    setUnreadCount(0);
+
+    try {
+      const { data } = await deleteNotifications();
+      toast.success(data.message || "Notifications deleted");
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "Could not delete notifications."));
+      deletingNotificationsRef.current = false;
+      await loadNotifications({ silent: true });
+      return;
+    } finally {
+      setNotificationsDeleting(false);
+    }
+
+    deletingNotificationsRef.current = false;
+  };
 
   useEffect(() => {
     setMobileOpen(false);
@@ -325,12 +366,24 @@ export function DashboardLayout({ role, userName, userLogo, sidebarItems, childr
 
                 {notificationsOpen && (
                   <div className="absolute right-0 top-11 w-80 max-w-[calc(100vw-2rem)] rounded-lg border border-[var(--border)] bg-[var(--card)] shadow-[var(--shadow-lg)] z-50 overflow-hidden">
-                    <div className="px-4 py-3 border-b border-[var(--border)]">
+                    <div className="px-4 py-3 border-b border-[var(--border)] flex items-center justify-between gap-3">
                       <p className="text-sm font-semibold text-[var(--foreground)]">Notifications</p>
+                      <button
+                        type="button"
+                        aria-label="Delete all notifications"
+                        title="Delete all notifications"
+                        onClick={handleDeleteNotifications}
+                        disabled={notificationsLoading || notificationsDeleting || notifications.length === 0}
+                        className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--muted-foreground)] hover:bg-[var(--destructive-soft)] hover:text-[var(--destructive)] transition-colors disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:bg-transparent disabled:hover:text-[var(--muted-foreground)]"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
                     <div className="max-h-80 overflow-y-auto">
                       {notificationsLoading ? (
                         <div className="px-4 py-4 text-sm text-[var(--muted-foreground)]">Loading notifications...</div>
+                      ) : notificationsDeleting ? (
+                        <div className="px-4 py-4 text-sm text-[var(--muted-foreground)]">Deleting notifications...</div>
                       ) : notifications.length === 0 ? (
                         <div className="px-4 py-4 text-sm text-[var(--muted-foreground)]">No new notifications.</div>
                       ) : (
