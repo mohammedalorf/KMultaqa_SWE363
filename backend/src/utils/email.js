@@ -509,6 +509,57 @@ export async function sendClubWarningEmail({
   return { ...delivery, recipient };
 }
 
+export async function sendClubContentRemovalEmail({
+  to,
+  clubName,
+  contentType,
+  title,
+  removalReason,
+}) {
+  const recipient = String(to ?? '').trim().toLowerCase();
+
+  if (!recipient) {
+    return { sent: false, delivery: 'none', recipient: '' };
+  }
+
+  const typeLabel = contentType === 'event' ? 'event' : 'post';
+  const reasonText = removalReason || 'a platform policy violation.';
+  const contentTitle = title || `Untitled ${typeLabel}`;
+
+  if (isConsoleDelivery()) {
+    console.log(`Club ${typeLabel} removal email for ${recipient}`);
+    console.log(`Club: ${clubName}`);
+    console.log(`Title: ${contentTitle}`);
+    console.log(`Reason: ${reasonText}`);
+    return { sent: false, delivery: 'console', recipient };
+  }
+
+  const delivery = await sendEmail({
+    to: recipient,
+    subject: `KMultaqa ${typeLabel} removed`,
+    text: [
+      `Hello ${clubName},`,
+      '',
+      `Your ${typeLabel} "${contentTitle}" has been removed from KMultaqa due to:`,
+      reasonText,
+      '',
+      'Contact the platform administrator if you believe this needs review.',
+    ].join('\n'),
+    html: `
+      <p>Hello ${escapeHtml(clubName)},</p>
+      <p>
+        Your ${escapeHtml(typeLabel)}
+        <strong>${escapeHtml(contentTitle)}</strong>
+        has been removed from KMultaqa due to:
+      </p>
+      <p>${escapeHtml(reasonText)}</p>
+      <p>Contact the platform administrator if you believe this needs review.</p>
+    `,
+  });
+
+  return { ...delivery, recipient };
+}
+
 export async function sendClubStatusEmail({
   to,
   clubName,
@@ -551,6 +602,52 @@ export async function sendClubStatusEmail({
       <p><strong>Admin note:</strong></p>
       <p>${escapeHtml(reasonText)}</p>
       <p>Contact the platform administrator if you believe this needs review.</p>
+    `,
+  });
+
+  return { ...delivery, recipient };
+}
+
+export async function sendPasswordResetEmail({
+  to,
+  recipientName,
+  token,
+  expiresAt,
+}) {
+  const recipient = String(to ?? '').trim().toLowerCase();
+
+  if (!recipient) {
+    return { sent: false, delivery: 'none', recipient: '' };
+  }
+
+  const name = recipientName || 'there';
+  const resetUrl = `${env.frontendBaseUrl}/reset-password/${encodeURIComponent(token)}`;
+  const expiresAtText = formatEmailDateTime(expiresAt);
+
+  if (isConsoleDelivery()) {
+    console.log(`Password reset link for ${recipient}: ${resetUrl}`);
+    return { sent: false, delivery: 'console', recipient };
+  }
+
+  const delivery = await sendEmail({
+    to: recipient,
+    subject: 'Reset your KMultaqa password',
+    text: [
+      `Hello ${name},`,
+      '',
+      'Use this link to reset your KMultaqa password:',
+      resetUrl,
+      '',
+      `This link expires at ${expiresAtText}.`,
+      '',
+      'If you did not request a password reset, ignore this email.',
+    ].join('\n'),
+    html: `
+      <p>Hello ${escapeHtml(name)},</p>
+      <p>Use this link to reset your KMultaqa password:</p>
+      <p><a href="${escapeHtml(resetUrl)}">${escapeHtml(resetUrl)}</a></p>
+      <p>This link expires at ${escapeHtml(expiresAtText)}.</p>
+      <p>If you did not request a password reset, ignore this email.</p>
     `,
   });
 

@@ -57,6 +57,12 @@ const clubSchema = new Schema({
   passwordSetupExpires: {
     type: Date,
   },
+  passwordResetToken: {
+    type: String,
+  },
+  passwordResetExpires: {
+    type: Date,
+  },
   description: {
     type: String,
     required: true,

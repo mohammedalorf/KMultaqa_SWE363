@@ -1,6 +1,8 @@
 import { createBrowserRouter, Navigate } from "react-router-dom";
 import LandingPage from "./pages/LandingPage";
 import NotFound from "./pages/NotFound";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 
 import StudentLogin from "./pages/student/StudentLogin";
 import StudentRegister from "./pages/student/StudentRegister";
@@ -84,12 +86,16 @@ export const router = createBrowserRouter([
   { path: "/", element: <LandingPage />, errorElement: <NotFound /> },
 
   { path: "/student/login", element: <StudentLogin /> },
+  { path: "/student/forgot-password", element: <ForgotPassword role="student" /> },
   { path: "/student/register", element: <StudentRegister /> },
   { path: "/student/verify-email", element: <StudentEmailVerification /> },
   { path: "/admin/login", element: <AdminLogin /> },
+  { path: "/admin/forgot-password", element: <ForgotPassword role="admin" /> },
   { path: "/club/login", element: <ClubLogin /> },
+  { path: "/club/forgot-password", element: <ForgotPassword role="club" /> },
   { path: "/club/register", element: <ClubRegister /> },
   { path: "/club/setup-password/:token", element: <ClubPasswordSetup /> },
+  { path: "/reset-password/:token", element: <ResetPassword /> },
 
   {
     path: "/student",

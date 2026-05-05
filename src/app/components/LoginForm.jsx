@@ -74,6 +74,7 @@ export default function LoginForm({
   };
 
   const content = ROLE_CONTENT[role] || ROLE_CONTENT.student;
+  const forgotPasswordPath = `/${role}/forgot-password`;
 
   return (
     <div className="min-h-screen flex">
@@ -164,9 +165,9 @@ export default function LoginForm({
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
                 <Label htmlFor="password">Password</Label>
-                <a href="#" className="text-xs text-[var(--primary)] hover:underline">
+                <Link to={forgotPasswordPath} className="text-xs text-[var(--primary)] hover:underline">
                   Forgot password?
-                </a>
+                </Link>
               </div>
               <Input
                 id="password"

@@ -71,6 +71,12 @@ const studentSchema = new Schema({
   verificationCodeExpires: {
     type: Date,
   },
+  passwordResetToken: {
+    type: String,
+  },
+  passwordResetExpires: {
+    type: Date,
+  },
   followedClubs: [
     {
       type: Schema.Types.ObjectId,

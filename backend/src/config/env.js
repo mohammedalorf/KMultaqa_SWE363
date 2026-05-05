@@ -170,4 +170,8 @@ export const env = {
     'PASSWORD_SETUP_EXPIRES_IN_SECONDS',
     86400
   ),
+  passwordResetExpiresInSeconds: getNumberEnv(
+    'PASSWORD_RESET_EXPIRES_IN_SECONDS',
+    3600
+  ),
 };

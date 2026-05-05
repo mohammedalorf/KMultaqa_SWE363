@@ -174,7 +174,7 @@ function serializeEventDetail(event, registeredCount, registrationStatus) {
 }
 
 function getRegistrationStatus(event, registrationStatus) {
-  if (registrationStatus === 'cancelled' || event.status === 'cancelled') {
+  if (registrationStatus === 'cancelled' || ['cancelled', 'removed'].includes(event.status)) {
     return 'cancelled';
   }
 
@@ -322,7 +322,7 @@ async function findReportTarget(targetModel, targetId) {
   }
 
   if (targetModel === 'Event') {
-    return Event.findOne({ _id: targetId, status: { $ne: 'draft' } }).select('_id').lean();
+    return Event.findOne({ _id: targetId, status: 'published' }).select('_id').lean();
   }
 
   return Club.findOne({ _id: targetId, status: 'active' }).select('_id').lean();
@@ -571,7 +571,7 @@ studentRouter.get('/events/registrations', requireAuth, requireRole('student'), 
     })
       .populate({
         path: 'event',
-        match: { status: { $ne: 'draft' } },
+        match: { status: { $nin: ['draft', 'removed'] } },
         populate: {
           path: 'club',
           select: 'clubName logoUrl',
@@ -599,7 +599,7 @@ studentRouter.get('/events/:eventId', requireAuth, requireRole('student'), async
 
     const event = await Event.findOne({
       _id: req.params.eventId,
-      status: { $ne: 'draft' },
+      status: { $nin: ['draft', 'removed'] },
     })
       .populate('club', 'clubName logoUrl')
       .lean();

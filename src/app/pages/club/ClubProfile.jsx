@@ -359,6 +359,16 @@ export default function ClubProfile() {
     "--profile-primary-text": primaryTextColor,
     "--profile-secondary-text": secondaryTextColor,
   };
+  const accentButtonStyle = {
+    backgroundColor: accentColor,
+    borderColor: accentColor,
+    color: "#fff",
+  };
+  const accentOutlineButtonStyle = {
+    backgroundColor: hexToRgba(accentColor, 0.08),
+    borderColor: accentColor,
+    color: accentColor,
+  };
 
   return (
     <PageContainer>
@@ -406,7 +416,7 @@ export default function ClubProfile() {
                 <Button
                   type="button"
                   variant="outline"
-                  style={{ backgroundColor: accentColor, borderColor: accentColor, color: "#fff" }}
+                  style={accentButtonStyle}
                 >
                   <Heart className="h-4 w-4" />
                   Follow
@@ -417,10 +427,11 @@ export default function ClubProfile() {
                   size="icon"
                   disabled
                   aria-label="Enable notifications"
+                  style={accentOutlineButtonStyle}
                 >
                   <BellOff className="h-4 w-4" />
                 </Button>
-                <Button type="button" variant="ghost" size="icon" aria-label="Report club">
+                <Button type="button" variant="outline" size="icon" aria-label="Report club" style={accentOutlineButtonStyle}>
                   <Flag className="h-4 w-4" />
                 </Button>
               </div>

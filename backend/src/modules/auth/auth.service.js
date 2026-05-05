@@ -4,10 +4,10 @@ import { env } from '../../config/env.js';
 import Admin from '../../../models/Admin.js';
 import Club from '../../../models/Club.js';
 import Student from '../../../models/Student.js';
-import { sendVerificationEmail } from '../../utils/email.js';
+import { sendPasswordResetEmail, sendVerificationEmail } from '../../utils/email.js';
 import { createError, signToken } from '../../utils/jwt.js';
 import { hashPassword, verifyPassword } from '../../utils/password.js';
-import { hashToken } from '../../utils/tokens.js';
+import { createRandomToken, hashToken } from '../../utils/tokens.js';
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const kfupmEmailPattern = /^[^\s@]+@kfupm\.edu\.sa$/i;
@@ -65,6 +65,11 @@ function validateLoginInput(input) {
   return { email, password, role };
 }
 
+function normalizeAuthRole(value) {
+  const role = typeof value === 'string' ? value.trim().toLowerCase() : '';
+  return ['student', 'club', 'admin'].includes(role) ? role : '';
+}
+
 function getRoleForAccount(account) {
   const modelName = account?.constructor?.modelName;
 
@@ -117,6 +122,10 @@ function createVerificationCode() {
 
 function getVerificationExpiryDate() {
   return new Date(Date.now() + env.emailVerificationExpiresInSeconds * 1000);
+}
+
+function getPasswordResetExpiryDate() {
+  return new Date(Date.now() + env.passwordResetExpiresInSeconds * 1000);
 }
 
 async function saveVerificationValues(userId, code) {
@@ -221,16 +230,17 @@ export async function registerUser(input) {
 
 async function findAccountByEmail(email, role = '') {
   const normalizedEmail = email.toLowerCase();
+  const normalizedRole = normalizeAuthRole(role);
 
-  if (role === 'student') {
+  if (normalizedRole === 'student') {
     return Student.findOne({ email: normalizedEmail }).select(authAccountFields);
   }
 
-  if (role === 'club') {
+  if (normalizedRole === 'club') {
     return Club.findOne({ email: normalizedEmail }).select(authAccountFields);
   }
 
-  if (role === 'admin') {
+  if (normalizedRole === 'admin') {
     return Admin.findOne({ email: normalizedEmail }).select(authAccountFields);
   }
 
@@ -249,6 +259,140 @@ async function findAccountByEmail(email, role = '') {
   }
 
   return admin;
+}
+
+async function findAccountForPasswordReset(email, role = '') {
+  const normalizedEmail = email.toLowerCase();
+  const normalizedRole = normalizeAuthRole(role);
+
+  if (normalizedRole === 'student') {
+    return Student.findOne({ email: normalizedEmail });
+  }
+
+  if (normalizedRole === 'club') {
+    return Club.findOne({ email: normalizedEmail });
+  }
+
+  if (normalizedRole === 'admin') {
+    return Admin.findOne({ email: normalizedEmail });
+  }
+
+  const [student, club, admin] = await Promise.all([
+    Student.findOne({ email: normalizedEmail }),
+    Club.findOne({ email: normalizedEmail }),
+    Admin.findOne({ email: normalizedEmail }),
+  ]);
+
+  return student || club || admin;
+}
+
+function getAccountDisplayName(account) {
+  return account?.fullName ?? account?.clubName ?? 'there';
+}
+
+async function findAccountByPasswordResetToken(token) {
+  const hashedToken = hashToken(token);
+  const query = {
+    passwordResetToken: hashedToken,
+    passwordResetExpires: { $gt: new Date() },
+  };
+  const [student, club, admin] = await Promise.all([
+    Student.findOne(query),
+    Club.findOne(query),
+    Admin.findOne(query),
+  ]);
+
+  return student || club || admin;
+}
+
+function validateForgotPasswordInput(input) {
+  const email = requiredString(input?.email, 'Email').toLowerCase();
+  const role = normalizeAuthRole(input?.role);
+
+  if (!emailPattern.test(email)) {
+    throw createError(400, 'Email format is invalid');
+  }
+
+  return { email, role };
+}
+
+function validatePasswordResetToken(input) {
+  return requiredString(input?.token, 'Password reset token');
+}
+
+function validatePasswordResetInput(input) {
+  const token = validatePasswordResetToken(input);
+  const password = requiredString(input?.password, 'Password');
+
+  if (password.length < 8) {
+    throw createError(400, 'Password must be at least 8 characters');
+  }
+
+  return { token, password };
+}
+
+export async function requestPasswordReset(input) {
+  const payload = validateForgotPasswordInput(input);
+  const account = await findAccountForPasswordReset(payload.email, payload.role);
+  const genericResponse = {
+    message: 'If an account exists for that email, a password reset link has been sent.',
+  };
+
+  if (!account) {
+    return genericResponse;
+  }
+
+  const token = createRandomToken();
+  const expiresAt = getPasswordResetExpiryDate();
+
+  account.passwordResetToken = hashToken(token);
+  account.passwordResetExpires = expiresAt;
+  await account.save();
+
+  await sendPasswordResetEmail({
+    to: account.email,
+    recipientName: getAccountDisplayName(account),
+    token,
+    expiresAt,
+  });
+
+  return genericResponse;
+}
+
+export async function getPasswordReset(input) {
+  const token = validatePasswordResetToken(input);
+  const account = await findAccountByPasswordResetToken(token);
+
+  if (!account) {
+    throw createError(400, 'Password reset link is invalid or expired');
+  }
+
+  return {
+    account: {
+      email: account.email,
+      name: getAccountDisplayName(account),
+      role: getRoleForAccount(account),
+    },
+  };
+}
+
+export async function resetPassword(input) {
+  const payload = validatePasswordResetInput(input);
+  const account = await findAccountByPasswordResetToken(payload.token);
+
+  if (!account) {
+    throw createError(400, 'Password reset link is invalid or expired');
+  }
+
+  account.passwordHash = await hashPassword(payload.password);
+  account.passwordResetToken = undefined;
+  account.passwordResetExpires = undefined;
+  await account.save();
+
+  return {
+    message: 'Password reset successfully. Sign in with your new password.',
+    user: sanitizeUser(account),
+  };
 }
 
 export async function loginUser(input) {

@@ -3,9 +3,12 @@ import { requireAuth } from '../../middlewares/auth.middleware.js';
 import {
   loginUser,
   registerUser,
+  requestPasswordReset,
   resendVerificationEmail,
+  resetPassword,
   sanitizeUser,
   getClubPasswordSetup,
+  getPasswordReset,
   setupClubPassword,
   verifyEmailAddress,
 } from './auth.service.js';
@@ -51,6 +54,33 @@ authRouter.post('/verify-email', handleVerifyEmail);
 authRouter.post('/resend-verification', async (req, res, next) => {
   try {
     const result = await resendVerificationEmail(req.body);
+    res.status(200).json(result);
+  } catch (error) {
+    next(error);
+  }
+});
+
+authRouter.post('/forgot-password', async (req, res, next) => {
+  try {
+    const result = await requestPasswordReset(req.body);
+    res.status(200).json(result);
+  } catch (error) {
+    next(error);
+  }
+});
+
+authRouter.get('/reset-password/:token', async (req, res, next) => {
+  try {
+    const result = await getPasswordReset({ token: req.params.token });
+    res.status(200).json(result);
+  } catch (error) {
+    next(error);
+  }
+});
+
+authRouter.post('/reset-password', async (req, res, next) => {
+  try {
+    const result = await resetPassword(req.body);
     res.status(200).json(result);
   } catch (error) {
     next(error);

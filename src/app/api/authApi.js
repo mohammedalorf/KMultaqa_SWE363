@@ -38,6 +38,24 @@ export function getCurrentUser() {
   return apiClient.get("/auth/me");
 }
 
+export function requestPasswordReset({ email, role }) {
+  return apiClient.post("/auth/forgot-password", {
+    email,
+    role,
+  });
+}
+
+export function getPasswordReset(token) {
+  return apiClient.get(`/auth/reset-password/${token}`);
+}
+
+export function resetPassword({ token, password }) {
+  return apiClient.post("/auth/reset-password", {
+    token,
+    password,
+  });
+}
+
 export function getClubPasswordSetup(token) {
   return apiClient.get(`/auth/club/setup-password/${token}`);
 }

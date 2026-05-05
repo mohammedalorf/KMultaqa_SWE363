@@ -242,6 +242,16 @@ export default function ClubProfileView() {
   const cardColor = getCardColor(club?.cardColor);
   const primaryTextColor = getPrimaryTextColor(club?.primaryTextColor);
   const secondaryTextColor = getSecondaryTextColor(club?.secondaryTextColor);
+  const accentButtonStyle = {
+    backgroundColor: accentColor,
+    borderColor: accentColor,
+    color: "#fff",
+  };
+  const accentOutlineButtonStyle = {
+    backgroundColor: hexToRgba(accentColor, 0.08),
+    borderColor: accentColor,
+    color: accentColor,
+  };
 
   const scrollToTabs = () => {
     window.requestAnimationFrame(() => {
@@ -415,11 +425,7 @@ export default function ClubProfileView() {
               variant="outline"
               onClick={handleToggleFollow}
               disabled={isFollowBusy}
-              style={
-                isFollowing
-                  ? { borderColor: accentColor, color: accentColor }
-                  : { backgroundColor: accentColor, borderColor: accentColor, color: "#fff" }
-              }
+              style={isFollowing ? accentOutlineButtonStyle : accentButtonStyle}
             >
               <Heart className={`h-4 w-4 ${isFollowing ? "fill-current" : ""}`} />
               {isFollowing ? "Following" : "Follow"}
@@ -430,17 +436,17 @@ export default function ClubProfileView() {
               onClick={handleToggleNotifications}
               disabled={!isFollowing || isNotificationBusy}
               aria-label={club.notificationsEnabled ? "Disable notifications" : "Enable notifications"}
-              style={isFollowing ? { borderColor: accentColor, color: accentColor } : undefined}
+              style={club.notificationsEnabled ? accentButtonStyle : accentOutlineButtonStyle}
             >
               {club.notificationsEnabled ? <Bell className="h-4 w-4" /> : <BellOff className="h-4 w-4" />}
             </Button>
             <Dialog open={reportOpen} onOpenChange={setReportOpen}>
               <DialogTrigger asChild>
-                <Button variant="ghost" size="icon" aria-label="Report club">
+                <Button variant="outline" size="icon" aria-label="Report club" style={accentOutlineButtonStyle}>
                   <Flag className="h-4 w-4" />
                 </Button>
               </DialogTrigger>
-              <DialogContent>
+              <DialogContent className="text-[var(--foreground)]">
                 <DialogHeader>
                   <DialogTitle>Report Club</DialogTitle>
                 </DialogHeader>

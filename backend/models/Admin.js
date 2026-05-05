@@ -23,6 +23,12 @@ const adminSchema = new mongoose.Schema({
   passwordSetupExpires: {
     type: Date,
   },
+  passwordResetToken: {
+    type: String,
+  },
+  passwordResetExpires: {
+    type: Date,
+  },
 });
 
 export default mongoose.models.Admin

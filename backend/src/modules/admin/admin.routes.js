@@ -11,10 +11,10 @@ import { env } from '../../config/env.js';
 import { requireAuth, requireRole } from '../../middlewares/auth.middleware.js';
 import {
   sendAppealDecisionEmail,
+  sendClubContentRemovalEmail,
   sendClubPasswordSetupEmail,
   sendClubRequestRejectionEmail,
   sendClubStatusEmail,
-  sendClubWarningEmail,
   sendPlatformAnnouncementEmail,
 } from '../../utils/email.js';
 import { createError } from '../../utils/jwt.js';
@@ -245,35 +245,15 @@ async function notifyAppealRequester(appeal) {
 function normalizeModerationAction(value) {
   const action = typeof value === 'string' ? value.trim().toLowerCase() : 'dismiss';
 
-  if (!['dismiss', 'hide', 'cancel', 'warn', 'suspend'].includes(action)) {
+  if (!['dismiss', 'remove', 'suspend'].includes(action)) {
     throw createError(400, 'Moderation action is invalid');
   }
 
   return action;
 }
 
-function normalizeOptionalText(value) {
-  return typeof value === 'string' ? value.trim() : '';
-}
-
-function buildModerationNote({ action, reasonCategory, warningType, suspensionDurationDays, evidenceReference, adminNote }) {
+function buildModerationNote({ action, adminNote }) {
   const parts = [`Action: ${action}`];
-
-  if (reasonCategory) {
-    parts.push(`Reason: ${reasonCategory}`);
-  }
-
-  if (warningType) {
-    parts.push(`Warning type: ${warningType}`);
-  }
-
-  if (suspensionDurationDays) {
-    parts.push(`Suspension duration: ${suspensionDurationDays} days`);
-  }
-
-  if (evidenceReference) {
-    parts.push(`Evidence: ${evidenceReference}`);
-  }
 
   if (adminNote) {
     parts.push(`Note: ${adminNote}`);
@@ -282,85 +262,105 @@ function buildModerationNote({ action, reasonCategory, warningType, suspensionDu
   return parts.join('\n');
 }
 
-async function getClubIdForReportTarget(report) {
-  if (report.targetModel === 'Club') {
-    return report.target;
-  }
-
+async function findReportedContent(report) {
   if (report.targetModel === 'Post') {
-    const post = await Post.findById(report.target).select('club').lean();
-    return post?.club ?? null;
+    const post = await Post.findById(report.target)
+      .select('club title status')
+      .populate('club', 'clubName email');
+
+    if (!post || !post.club) {
+      throw createError(404, 'Reported post not found');
+    }
+
+    return {
+      contentId: post._id,
+      contentType: 'post',
+      model: Post,
+      removedStatus: 'hidden',
+      title: post.title,
+      club: post.club,
+    };
   }
 
   if (report.targetModel === 'Event') {
-    const event = await Event.findById(report.target).select('club').lean();
-    return event?.club ?? null;
+    const event = await Event.findById(report.target)
+      .select('club title status')
+      .populate('club', 'clubName email');
+
+    if (!event || !event.club) {
+      throw createError(404, 'Reported event not found');
+    }
+
+    return {
+      contentId: event._id,
+      contentType: 'event',
+      model: Event,
+      removedStatus: 'removed',
+      title: event.title,
+      club: event.club,
+    };
   }
 
-  return null;
+  throw createError(400, 'Remove content is only available for reported posts and events');
 }
 
-async function sendWarningForReport(report, { warningType, evidenceReference, adminNote }) {
-  const clubId = await getClubIdForReportTarget(report);
+async function removeReportedContent(report, details) {
+  const { adminNote } = details;
+  const { contentId, contentType, model, removedStatus, title, club } = await findReportedContent(report);
 
-  if (!clubId) {
-    throw createError(404, 'Target club not found for warning');
+  await model.findByIdAndUpdate(contentId, { $set: { status: removedStatus } });
+
+  try {
+    return await sendClubContentRemovalEmail({
+      to: club.email,
+      clubName: club.clubName,
+      contentType,
+      title,
+      removalReason: adminNote,
+    });
+  } catch (error) {
+    console.error('Failed to send content removal email', error);
+    return { sent: false, delivery: 'failed', recipient: club.email };
+  }
+}
+
+async function suspendReportedClub(report, details) {
+  const { adminNote } = details;
+
+  if (report.targetModel !== 'Club') {
+    throw createError(400, 'Suspend club is only available for reported clubs');
   }
 
-  const club = await Club.findById(clubId).select('clubName email').lean();
+  const club = await Club.findById(report.target).select('clubName email status').lean();
 
   if (!club) {
-    throw createError(404, 'Target club not found for warning');
+    throw createError(404, 'Reported club not found');
   }
 
-  return sendClubWarningEmail({
-    to: club.email,
-    clubName: club.clubName,
-    warningType,
-    message: adminNote,
-    evidenceReference,
+  await Club.findByIdAndUpdate(report.target, {
+    $set: {
+      status: 'suspended',
+      suspensionReason: adminNote,
+    },
   });
+
+  return notifyClubStatusChange(club, 'suspended', adminNote);
 }
 
 async function applyModerationAction(report, action, details) {
-  const { adminNote } = details;
-
   if (action === 'dismiss') {
-    return;
+    return null;
   }
 
-  if (action === 'warn') {
-    await sendWarningForReport(report, details);
-    return;
+  if (action === 'remove') {
+    return removeReportedContent(report, details);
   }
 
   if (action === 'suspend') {
-    const clubId = await getClubIdForReportTarget(report);
-
-    if (!clubId) {
-      throw createError(404, 'Target club not found for suspension');
-    }
-
-    await Club.findByIdAndUpdate(clubId, {
-      $set: {
-        status: 'suspended',
-        suspensionReason: adminNote || 'Suspended after report moderation',
-      },
-    });
-    return;
+    return suspendReportedClub(report, details);
   }
 
-  if (action === 'hide' && report.targetModel === 'Post') {
-    await Post.findByIdAndUpdate(report.target, { $set: { status: 'hidden' } });
-    return;
-  }
-
-  if (action === 'cancel' && report.targetModel === 'Event') {
-    await Event.findByIdAndUpdate(report.target, { $set: { status: 'cancelled' } });
-    return;
-  }
-
-  throw createError(400, `${action} is not available for reported ${report.targetModel.toLowerCase()} items`);
+  throw createError(400, 'Moderation action is invalid');
 }
 
 function getPasswordSetupExpiryDate() {
@@ -871,13 +871,7 @@ adminRouter.patch('/reports/:reportId', requireAuth, requireRole('admin'), async
 
     const status = typeof req.body?.status === 'string' ? req.body.status.trim().toLowerCase() : '';
     const action = normalizeModerationAction(req.body?.moderationAction);
-    const reasonCategory = normalizeOptionalText(req.body?.reasonCategory);
-    const warningType = normalizeOptionalText(req.body?.warningType);
-    const evidenceReference = normalizeOptionalText(req.body?.evidenceReference);
     const adminNote = normalizeAdminNote(req.body?.adminNote);
-    const suspensionDurationDays = req.body?.suspensionDurationDays
-      ? Number(req.body.suspensionDurationDays)
-      : null;
 
     if (!['resolved', 'dismissed'].includes(status)) {
       throw createError(400, 'Status must be resolved or dismissed');
@@ -891,22 +885,12 @@ adminRouter.patch('/reports/:reportId', requireAuth, requireRole('admin'), async
       throw createError(400, 'Resolved reports require a moderation action');
     }
 
-    if (['hide', 'cancel'].includes(action) && !reasonCategory) {
-      throw createError(400, 'Reason category is required for hide/cancel actions');
+    if (action === 'remove' && !adminNote) {
+      throw createError(400, 'Removal reason is required');
     }
 
-    if (action === 'warn' && (!warningType || !adminNote)) {
-      throw createError(400, 'Warning type and message are required');
-    }
-
-    if (action === 'suspend') {
-      if (!adminNote) {
-        throw createError(400, 'Suspension reason is required');
-      }
-
-      if (!Number.isInteger(suspensionDurationDays) || suspensionDurationDays < 1) {
-        throw createError(400, 'Suspension duration must be a positive whole number');
-      }
+    if (action === 'suspend' && !adminNote) {
+      throw createError(400, 'Suspension reason is required');
     }
 
     const report = await Report.findById(req.params.reportId);
@@ -919,19 +903,21 @@ adminRouter.patch('/reports/:reportId', requireAuth, requireRole('admin'), async
       throw createError(400, 'Only pending reports can be moderated');
     }
 
-    await applyModerationAction(report, action, {
+    if (action === 'remove' && !['Post', 'Event'].includes(report.targetModel)) {
+      throw createError(400, 'Remove content is only available for reported posts and events');
+    }
+
+    if (action === 'suspend' && report.targetModel !== 'Club') {
+      throw createError(400, 'Suspend club is only available for reported clubs');
+    }
+
+    const notificationDelivery = await applyModerationAction(report, action, {
       adminNote,
-      warningType,
-      evidenceReference,
     });
 
     report.status = status;
     report.adminNote = buildModerationNote({
       action,
-      reasonCategory,
-      warningType,
-      suspensionDurationDays,
-      evidenceReference,
       adminNote,
     });
     report.reviewedAt = new Date();
@@ -945,6 +931,7 @@ adminRouter.patch('/reports/:reportId', requireAuth, requireRole('admin'), async
     res.status(200).json({
       message: 'Report updated',
       report: serializeReport(updatedReport),
+      notificationDelivery,
     });
   } catch (error) {
     next(error);

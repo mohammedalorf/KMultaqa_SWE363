@@ -99,7 +99,7 @@ const eventSchema = new Schema({
   },
   status: {
     type: String,
-    enum: ['draft', 'published', 'cancelled'],
+    enum: ['draft', 'published', 'cancelled', 'removed'],
     default: 'published',
   },
 });

@@ -12,7 +12,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../../components/ui/dialog";
 import { Textarea } from "../../components/ui/textarea";
 import { Label } from "../../components/ui/label";
-import { Input } from "../../components/ui/input";
 import { Eye, Flag, Check, X } from "lucide-react";
 import { getApiErrorMessage } from "../../api/apiClient";
 import { getAdminReports, updateAdminReport } from "../../api/adminApi";
@@ -24,31 +23,27 @@ function reportStatusVariant(status) {
 }
 
 const moderationActions = {
-  dismiss: "Dismiss report",
-  hide: "Hide post",
-  cancel: "Cancel event",
-  warn: "Warn club",
+  dismiss: "Dismiss",
+  remove: "Remove content",
   suspend: "Suspend club",
 };
 
 function getDefaultModerationAction(report) {
-  if (report?.targetModel === "Post") return "hide";
-  if (report?.targetModel === "Event") return "cancel";
-  return "warn";
+  if (["Post", "Event"].includes(report?.targetModel)) return "remove";
+  if (report?.targetModel === "Club") return "suspend";
+  return "dismiss";
 }
 
 function getAvailableModerationActions(report) {
-  const actions = [];
+  const actions = ["dismiss"];
 
-  if (report?.targetModel === "Post") {
-    actions.push("hide");
+  if (["Post", "Event"].includes(report?.targetModel)) {
+    actions.push("remove");
   }
 
-  if (report?.targetModel === "Event") {
-    actions.push("cancel");
+  if (report?.targetModel === "Club") {
+    actions.push("suspend");
   }
-
-  actions.push("warn", "suspend", "dismiss");
 
   return actions;
 }
@@ -57,11 +52,7 @@ export default function ReportsModeration() {
   const [reports, setReports] = useState([]);
   const [selectedReport, setSelectedReport] = useState(null);
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
-  const [moderationAction, setModerationAction] = useState("hide");
-  const [reasonCategory, setReasonCategory] = useState("");
-  const [warningType, setWarningType] = useState("");
-  const [evidenceReference, setEvidenceReference] = useState("");
-  const [suspensionDuration, setSuspensionDuration] = useState("7");
+  const [moderationAction, setModerationAction] = useState("dismiss");
   const [adminNote, setAdminNote] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [isLoading, setIsLoading] = useState(true);
@@ -100,41 +91,26 @@ export default function ReportsModeration() {
   const handleViewReport = (report) => {
     setSelectedReport(report);
     setModerationAction(getDefaultModerationAction(report));
-    setReasonCategory("");
-    setWarningType("");
-    setEvidenceReference("");
-    setSuspensionDuration("7");
     setAdminNote(report.adminNote || "");
     setShowDetailsDialog(true);
   };
 
   const canApplyAction = selectedReport?.status === "pending";
   const availableModerationActions = getAvailableModerationActions(selectedReport);
-  const needsPolicyReason = ["hide", "cancel"].includes(moderationAction);
+  const needsRemovalReason = moderationAction === "remove";
+  const needsSuspensionReason = moderationAction === "suspend";
 
   const validateModerationAction = () => {
     if (!availableModerationActions.includes(moderationAction)) {
       return "Choose an available moderation action for this report.";
     }
 
-    if (needsPolicyReason && !reasonCategory) {
-      return "Choose a policy reason before applying this content action.";
+    if (needsRemovalReason && !adminNote.trim()) {
+      return "Removal reason is required.";
     }
 
-    if (moderationAction === "warn" && !warningType) {
-      return "Choose a warning type before sending a warning.";
-    }
-
-    if (moderationAction === "warn" && !adminNote.trim()) {
-      return "Warning message is required.";
-    }
-
-    if (moderationAction === "suspend" && !adminNote.trim()) {
+    if (needsSuspensionReason && !adminNote.trim()) {
       return "Suspension reason is required.";
-    }
-
-    if (moderationAction === "suspend" && Number(suspensionDuration) < 1) {
-      return "Suspension duration must be at least 1 day.";
     }
 
     return "";
@@ -160,10 +136,6 @@ export default function ReportsModeration() {
       const { data } = await updateAdminReport(selectedReport.id, {
         status,
         moderationAction,
-        reasonCategory,
-        warningType,
-        evidenceReference: evidenceReference.trim(),
-        suspensionDurationDays: moderationAction === "suspend" ? Number(suspensionDuration) : undefined,
         adminNote: adminNote.trim(),
       });
 
@@ -171,15 +143,17 @@ export default function ReportsModeration() {
       toast.success(
         moderationAction === "dismiss"
           ? "Report dismissed."
-          : `${moderationActions[moderationAction]} action recorded.`
+          : moderationAction === "suspend"
+            ? data.notificationDelivery?.delivery === "failed"
+              ? "Club suspended. Email notification could not be sent."
+              : "Club suspended and notified."
+            : data.notificationDelivery?.delivery === "failed"
+              ? "Content removed. Email notification could not be sent."
+              : "Content removed and club notified."
       );
       setShowDetailsDialog(false);
       setSelectedReport(null);
-      setModerationAction("hide");
-      setReasonCategory("");
-      setWarningType("");
-      setEvidenceReference("");
-      setSuspensionDuration("7");
+      setModerationAction("dismiss");
       setAdminNote("");
     } catch (error) {
       toast.error(getApiErrorMessage(error, "Could not update report."));
@@ -343,82 +317,28 @@ export default function ReportsModeration() {
                     </SelectContent>
                   </Select>
                 </div>
-
-                {needsPolicyReason && (
-                  <div>
-                    <Label>Policy Reason</Label>
-                    <Select value={reasonCategory} onValueChange={setReasonCategory} disabled={!canApplyAction}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select reason" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="spam">Spam</SelectItem>
-                        <SelectItem value="misleading">Misleading information</SelectItem>
-                        <SelectItem value="harassment">Harassment</SelectItem>
-                        <SelectItem value="inappropriate">Inappropriate content</SelectItem>
-                        <SelectItem value="other">Other policy violation</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-
-                {moderationAction === "warn" && (
-                  <div>
-                    <Label>Warning Type</Label>
-                    <Select value={warningType} onValueChange={setWarningType} disabled={!canApplyAction}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select warning type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="policy-violation">Policy violation</SelectItem>
-                        <SelectItem value="misconduct">Misconduct</SelectItem>
-                        <SelectItem value="repeated-offense">Repeated offense</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-
-                {moderationAction === "warn" && (
-                  <div>
-                    <Label htmlFor="evidenceReference">Evidence or Report Reference (optional)</Label>
-                    <Input
-                      id="evidenceReference"
-                      value={evidenceReference}
-                      onChange={(e) => setEvidenceReference(e.target.value)}
-                      placeholder={`Report ${selectedReport.id}`}
-                      disabled={!canApplyAction}
-                    />
-                  </div>
-                )}
-
-                {moderationAction === "suspend" && (
-                  <div>
-                    <Label htmlFor="suspensionDuration">Suspension Duration (days)</Label>
-                    <Input
-                      id="suspensionDuration"
-                      type="number"
-                      min="1"
-                      value={suspensionDuration}
-                      onChange={(e) => setSuspensionDuration(e.target.value)}
-                      disabled={!canApplyAction}
-                    />
-                  </div>
-                )}
               </div>
               <div>
                 <Label htmlFor="adminNote">
-                  {moderationAction === "warn"
-                    ? "Warning Message"
-                    : moderationAction === "suspend"
+                  {needsRemovalReason
+                    ? "Removal Reason"
+                    : needsSuspensionReason
                       ? "Suspension Reason"
                       : "Admin Note"}
                 </Label>
                 <Textarea
                   id="adminNote"
-                  placeholder="Add notes about your decision..."
+                  placeholder={
+                    needsRemovalReason
+                      ? "Explain why this content is being removed..."
+                      : needsSuspensionReason
+                        ? "Explain why this club is being suspended..."
+                        : "Add notes about your decision..."
+                  }
                   value={adminNote}
                   onChange={(e) => setAdminNote(e.target.value)}
                   rows={3}
+                  disabled={!canApplyAction}
                 />
               </div>
             </div>
@@ -429,7 +349,9 @@ export default function ReportsModeration() {
                 ? "Saving..."
                 : moderationAction === "dismiss"
                   ? "Dismiss Report"
-                  : `Confirm ${moderationActions[moderationAction]}`}
+                  : moderationAction === "suspend"
+                    ? "Suspend Club"
+                    : "Remove Content"}
             </Button>
           </DialogFooter>
         </DialogContent>

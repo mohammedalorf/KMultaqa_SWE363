@@ -130,7 +130,7 @@ export default function ClubLogin() {
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
                 <Label htmlFor="password">Password</Label>
-                <a href="#" className="text-xs text-[var(--primary)] hover:underline">Forgot password?</a>
+                <Link to="/club/forgot-password" className="text-xs text-[var(--primary)] hover:underline">Forgot password?</Link>
               </div>
               <Input
                 id="password"
